@@ -608,6 +608,21 @@ function handleContactSubmit(e){
 
 // ---- Case studies data & accordion ----
 const caseStudies = [
+    {
+    title: "SOC Alert Triage Tool: Automated Correlation & Manual Payload Analysis",
+    category: "Cybersecurity — SOC Operations & Threat Analysis",
+    type: "academic",
+    stats: ["25 alerts triaged into 10 incidents", "MITRE ATT&CK mapped"],
+    body: `
+      <h4>Context</h4><p>Built as part of an ongoing home SOC lab (pfSense, Windows AD, Ubuntu, Wazuh/Security Onion, Kali, isolated network) to practice real Tier 1 analyst workflows before the lab's logging infrastructure was fully live.</p>
+      <h4>Objective</h4><p>Build a tool that ingests raw Wazuh/Security Onion-style alert exports and turns them into an analyst-ready triage report, then manually investigate one flagged alert to confirm it was a genuine threat rather than noise.</p>
+      <h4>Actions</h4><p>Wrote a Python tool that parses JSON alert exports, scores each alert by severity, correlates alerts from the same source IP within a time window into single incidents, extracts MITRE ATT&CK tactics/techniques, and applies rule-based escalation recommendations. When the tool flagged a base64-encoded PowerShell command as CRITICAL, manually decoded it in CyberChef (From Base64 → Decode Text, UTF-16LE, matching how PowerShell's -EncodedCommand flag actually encodes scripts) and identified it as a fileless download-cradle payload. Cross-referenced the destination IP against the incident timeline to confirm it matched the same IP that had just brute-forced its way in, supporting escalation rather than dismissal as a false positive.</p>
+      <h4>Results</h4><p>Working tool tested against 25 synthetic alerts, correctly correlating them into 10 incidents; manually decoded and confirmed one payload as malicious with a documented chain of evidence; published to GitHub with full documentation, sample data, and a written investigation.</p>
+      <h4>Lessons learned</h4><p>Automated correlation gets you 80% of the way, but the manual decode was what actually proved the alert mattered; also learned to scope a v1 deliberately (source-IP-only correlation) and document the known limitation rather than over-building before shipping.</p>
+      <h4>Skills demonstrated</h4><p>Python scripting, SOC alert triage, MITRE ATT&CK mapping, manual payload analysis (CyberChef, base64/UTF-16LE decoding), incident correlation logic, technical documentation, Git/GitHub.</p>
+      <p><a href="https://github.com/CyberSamliya/soc-alert-triage" target="_blank" rel="noopener">View project on GitHub →</a></p>
+    `
+  },
   {
     title: "Kaizen-Led Production Efficiency Improvement",
     category: "Operational Excellence — Lean Six Sigma",
