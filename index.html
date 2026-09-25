@@ -226,9 +226,8 @@
     <ul class="nav-links" id="navLinks">
       <li><a href="#about">About</a></li>
       <li><a href="#experience">Experience</a></li>
-      <li><a href="#cybersecurity">Cybersecurity</a></li>
-      <li><a href="#operational-excellence">Op Excellence</a></li>
-      <li><a href="#ai-innovation">AI</a></li>
+      <li><a href="#cybersecurity">Portfolio</a></li>
+      <li><a href="#build-deployment">Home Lab</a></li>
       <li><a href="#case-studies">Case Studies</a></li>
       <li><a href="#education">Education</a></li>
       <li><a href="#skills">Skills</a></li>
@@ -420,6 +419,29 @@
   </div>
 </section>
 
+<!-- BUILD & DEPLOYMENT -->
+<section id="build-deployment">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Home Lab — Build &amp; Deployment</span>
+      <h2>Standing up a SOC environment from scratch</h2>
+      <p class="lead">An eight-week, self-directed build of an isolated home lab — firewall, domain, logging, and an attacker box — documented milestone by milestone rather than presented as a finished product.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><h3>1. Perimeter &amp; Core</h3><p>pfSense firewall, Windows Server (AD/DNS), and one Windows client stood up first — the deliberate build order, before any logging or detection tooling goes in.</p></div>
+      <div class="card"><h3>2. Logging Layer</h3><p>Wazuh/Security Onion added next, so every subsequent machine on the network is logging from the moment it joins — nothing added blind.</p></div>
+      <div class="card"><h3>3. Segmentation</h3><p>Ubuntu server and Kali attacker box join on isolated network segments, keeping offensive tooling walled off from the domain.</p></div>
+      <div class="card"><h3>4. Detection &amp; Response</h3><p>Real Wazuh/Security Onion alerts feed the triage workflow — replacing the synthetic data used to build and test the tooling ahead of the lab going live.</p></div>
+      <div class="card"><h3>5. Documentation</h3><p>Every milestone logged in a running build journal — what shipped, why it was sequenced that way, and how it ties back to the lab's end goal.</p></div>
+      <div class="card"><h3>6. End-to-End Case</h3><p>Week 8 target: one real incident carried start to finish — alert, correlation, manual investigation, report — on live lab telemetry instead of synthetic data.</p></div>
+    </div>
+    <div class="callout">
+      <h3>Where the build stands right now</h3>
+      <p>The <a href="#case-studies">SOC Alert Triage Tool</a> was deliberately built ahead of sequence — against realistic synthetic alert data — so a tested, working tool is already in hand for the moment the logging tier goes live, rather than losing time building it after. The full build log, tracked milestone by milestone, is in the <a href="https://github.com/CyberSamliya/soc-alert-triage/blob/main/PROGRESS_LOG.md" target="_blank" rel="noopener">project's PROGRESS_LOG →</a></p>
+    </div>
+  </div>
+</section>
+
 <!-- CASE STUDIES -->
 <section id="case-studies">
   <div class="container">
@@ -594,6 +616,7 @@
       <ul>
         <li><a href="#about">About</a></li>
         <li><a href="#experience">Experience</a></li>
+        <li><a href="#build-deployment">Home Lab</a></li>
         <li><a href="#case-studies">Case Studies</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#resume">Resume</a></li>
@@ -658,7 +681,7 @@ const caseStudies = [
     type: "academic",
     stats: ["25 alerts triaged into 10 incidents", "MITRE ATT&CK mapped"],
     body: `
-      <h4>Context</h4><p>Built as part of an ongoing home SOC lab (pfSense, Windows AD, Ubuntu, Wazuh/Security Onion, Kali, isolated network) to practice real Tier 1 analyst workflows before the lab's logging infrastructure was fully live.</p>
+      <h4>Context</h4><p>Built as part of an ongoing <a href="#build-deployment">home SOC lab</a> (pfSense, Windows AD, Ubuntu, Wazuh/Security Onion, Kali, isolated network) to practice real Tier 1 analyst workflows before the lab's logging infrastructure was fully live.</p>
       <h4>Objective</h4><p>Build a tool that ingests raw Wazuh/Security Onion-style alert exports and turns them into an analyst-ready triage report, then manually investigate one flagged alert to confirm it was a genuine threat rather than noise.</p>
       <h4>Actions</h4><p>Wrote a Python tool that parses JSON alert exports, scores each alert by severity, correlates alerts from the same source IP within a time window into single incidents, extracts MITRE ATT&CK tactics/techniques, and applies rule-based escalation recommendations. When the tool flagged a base64-encoded PowerShell command as CRITICAL, manually decoded it in CyberChef (From Base64 → Decode Text, UTF-16LE, matching how PowerShell's -EncodedCommand flag actually encodes scripts) and identified it as a fileless download-cradle payload. Cross-referenced the destination IP against the incident timeline to confirm it matched the same IP that had just brute-forced its way in, supporting escalation rather than dismissal as a false positive.</p>
       <h4>Results</h4><p>Working tool tested against 25 synthetic alerts, correctly correlating them into 10 incidents; manually decoded and confirmed one payload as malicious with a documented chain of evidence; published to GitHub with full documentation, sample data, and a written investigation.</p>
