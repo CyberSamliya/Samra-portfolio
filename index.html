@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Samra Ayele — Operational Excellence &amp; Cybersecurity Professional</title>
-<meta name="description" content="Operational Excellence Specialist and Summa Cum Laude cybersecurity graduate combining process discipline, risk analysis, and security skill.">
+<meta name="description" content="Samra Ayele's professional portfolio: operational excellence projects, cybersecurity labs, experience, and measurable results.">
 <meta name="robots" content="index, follow">
 <!-- Open Graph / social sharing -->
 <meta property="og:title" content="Samra Ayele — Operational Excellence & Cybersecurity Professional">
@@ -103,6 +103,18 @@
   .card h3{margin-bottom:.4em;}
   .card p{color:var(--text2); font-size:.94rem; margin-bottom:0;}
   section.alt{background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .portfolio-card{padding:0;align-self:start;}
+  .portfolio-card summary{list-style:none;cursor:pointer;padding:22px;min-height:122px;}
+  .portfolio-card summary::-webkit-details-marker,.portfolio-connection summary::-webkit-details-marker{display:none;}
+  .portfolio-card summary h3{margin:0 0 .35rem;}
+  .portfolio-hint{display:block;color:var(--text2);font-size:.9rem;padding-right:1.2rem;}
+  .portfolio-card summary::after{content:"+";float:right;color:var(--teal);font-size:1.35rem;font-weight:700;line-height:1;margin-top:-1.3rem;}
+  .portfolio-card[open] summary::after{content:"−";}
+  .portfolio-card>p{padding:0 22px 22px;margin:0;}
+  .portfolio-connection summary{cursor:pointer;list-style:none;}
+  .portfolio-connection summary h3{display:inline;margin-right:1rem;}
+  .portfolio-connection summary span{color:var(--teal);font-weight:700;}
+  .portfolio-connection>p{margin-top:1rem;}
   /* BADGES */
   .badge{display:inline-block; padding:4px 12px; border-radius:20px; font-size:.72rem; font-weight:700; letter-spacing:.03em;}
   .badge-done{background:#E4F4F1; color:var(--teal); border:1px solid var(--teal);}
@@ -117,6 +129,35 @@
   .job .meta{color:var(--text2); font-size:.85rem; font-weight:600; margin-bottom:.6em;}
   .job ul{margin:0; padding-left:20px; color:var(--text);}
   .job li{margin-bottom:.35em;}
+  .job-details{margin-bottom:12px;padding:0;border-left:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);}
+  .job-details::before{display:none;}
+  .job-details summary{list-style:none;cursor:pointer;padding:17px 52px 16px 20px;position:relative;}
+  .job-details summary::-webkit-details-marker{display:none;}
+  .job-details summary::after{content:"+";position:absolute;right:20px;top:18px;color:var(--teal);font-size:1.5rem;line-height:1;}
+  .job-details[open] summary::after{content:"−";}
+  .job-details .meta{margin:0;}
+  .job-content{padding:0 20px 20px;}
+  .job-content .chip-row{margin-top:12px;}
+  .skills-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .skill-group{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);align-self:start;}
+  .skill-group summary{list-style:none;cursor:pointer;padding:17px 48px 17px 20px;font-weight:700;color:var(--slate);position:relative;}
+  .skill-group summary::-webkit-details-marker{display:none;}
+  .skill-group summary::after{content:"+";position:absolute;right:20px;top:16px;color:var(--teal);font-size:1.4rem;line-height:1;}
+  .skill-group[open] summary::after{content:"−";}
+  .skill-group p{padding:0 20px 18px;margin:0;color:var(--text2);}
+  @media(max-width:700px){.skills-grid{grid-template-columns:1fr;}}
+  .recommendations{grid-column:1/-1;padding:0;}
+  .recommendations summary{list-style:none;cursor:pointer;padding:22px 52px 22px 22px;position:relative;}
+  .recommendations summary::-webkit-details-marker{display:none;}
+  .recommendations summary h3{margin:0;}
+  .recommendations summary span{color:var(--text2);font-size:.94rem;}
+  .recommendations summary::after{content:"+";position:absolute;right:22px;top:23px;color:var(--teal);font-size:1.5rem;line-height:1;}
+  .recommendations[open] summary::after{content:"−";}
+  .recommendations ul{list-style:none;padding:0 22px 22px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .recommendations li{padding:14px;border:1px solid var(--border);border-radius:8px;}
+  .recommendations li a{font-weight:700;}
+  .recommendations li span{display:block;color:var(--text2);font-size:.88rem;margin-top:3px;}
+  @media(max-width:700px){.recommendations ul{grid-template-columns:1fr;}}
   /* CASE STUDIES ACCORDION */
   .cs-item{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:16px; overflow:hidden;}
   .cs-head{display:flex; justify-content:space-between; align-items:center; padding:20px 24px; cursor:pointer; gap:16px;}
@@ -163,6 +204,16 @@
   .section-head{max-width:720px; margin-bottom:36px;}
   .callout{background:#EEF6F5; border:1px solid var(--teal); border-radius:var(--radius); padding:20px 24px; margin-top:24px;}
   .callout p:last-child{margin-bottom:0;}
+  section{scroll-margin-top:76px;}
+  :focus-visible{outline:3px solid var(--amber);outline-offset:3px;}
+  #home{background:linear-gradient(135deg,#14213d,#244760);}
+  #home h1,#home .eyebrow,#home .tagline{color:#fff;}
+  #home .lead{color:#e4edf2;}
+  #home h1{font-size:clamp(2.6rem,4.5vw,4.6rem);line-height:1.08;max-width:790px;}
+  #home .btn-primary{background:#fff;color:var(--navy);}
+  #home .btn-outline{border-color:#dbe9f0;color:#fff;}
+  #home .btn-outline:hover{background:#fff;color:var(--navy);}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
 </style>
 </head>
 <body>
@@ -194,12 +245,12 @@
   <div class="container hero-grid">
     <div>
       <span class="eyebrow">Operational Excellence &amp; Cybersecurity</span>
-      <h1>Operational Excellence Leader Turned Cybersecurity Professional</h1>
-      <p class="tagline">Where process improvement meets security operations.</p>
-      <p class="lead">I'm an Operational Excellence Specialist at Honeywell and a Summa Cum Laude Cybersecurity graduate. I bring four years of Lean Six Sigma leadership and audit/compliance experience together with hands-on cybersecurity training — and I'm looking for my next role in SOC operations, security analysis, GRC, or IT project coordination.</p>
+      <h1>Operational excellence expertise. A growing cybersecurity practice.</h1>
+      <p class="tagline">Samra Ayele · Operational Excellence Specialist · Cybersecurity Graduate</p>
+      <p class="lead">I improve complex operations through practical problem solving, clear documentation, and team coaching. At PIP Global Safety, I work on continuous improvement and process change. I earned my cybersecurity degree Summa Cum Laude and am building hands-on security skills through projects and labs.</p>
       <div class="btn-row">
-        <a href="#resume" class="btn btn-primary">Download My Resume</a>
-        <a href="#case-studies" class="btn btn-outline">View Case Studies</a>
+        <a href="#case-studies" class="btn btn-primary">Explore Projects</a>
+        <a href="#resume" class="btn btn-outline">Download My Resume</a>
         <a href="#contact" class="btn btn-outline">Let's Connect &rarr;</a>
       </div>
       <div class="stat-row">
@@ -234,7 +285,7 @@
     </div>
     <div class="grid grid-2">
       <div>
-        <p>I didn't plan to end up in cybersecurity — I found my way there through operations. For the past four years I've worked in Operational Excellence at Honeywell International, and the longer I did that work, the more I realized how much of it — audits, access-control reviews, documentation discipline — overlapped with security. So I went back to school for it.</p>
+        <p>My path to cybersecurity began in operations. I worked at Honeywell and now serve as an Operational Excellence Specialist at PIP Global Safety. Solving process problems taught me to observe carefully, assess risk, document decisions, and help teams adopt reliable ways of working.</p>
         <p>My cybersecurity education wasn't a career restart; it was an extension of work I was already doing. Supporting internal audits and reviewing access controls alongside IT and security teams gave me a front-row seat to how security actually functions inside a real operation. Earning my Bachelor of Science in Cybersecurity from Franklin University let me formalize that knowledge: network security, cryptography, risk frameworks, and hands-on lab work with the tools security teams use every day.</p>
         <p>I completed my degree while working full-time, graduating <strong>Summa Cum Laude with a 3.94 GPA</strong>. Before that, I earned my Associate of Science in General Science at Columbus State Community College, where I was inducted into the Phi Theta Kappa Honor Society.</p>
       </div>
@@ -262,15 +313,15 @@
     <div class="section-head">
       <span class="eyebrow">Experience</span>
       <h2>Professional Experience</h2>
-      <p class="lead">Four years of Operational Excellence leadership at a Fortune 500 manufacturing company, plus direct cybersecurity experience.</p>
+      <p class="lead">My experience spans logistics, operational excellence, and cybersecurity policy work. Select a role to see its responsibilities and results.</p>
     </div>
+
+    <h3>PIP Global Safety — Groveport, OH</h3>
+    <details class="job job-details"><summary><h3>Operational Excellence Specialist</h3><div class="meta">2025 – Present</div></summary><div class="job-content"><ul><li>Support continuous improvement, 5S, waste reduction, and standard work across warehouse operations.</li><li>Partner with both shifts on process documentation and improvement during the transition from SAP to Eclipse.</li><li>Use observation and root-cause analysis to investigate picking, staging, and shipping issues.</li></ul></div></details>
 
     <h3>Honeywell International — Groveport, OH</h3>
 
-    <div class="job">
-      <h3>Operational Excellence Specialist</h3>
-      <div class="meta">2023 – Present</div>
-      <ul>
+    <details class="job job-details"><summary><h3>Operational Excellence Specialist</h3><div class="meta">2023 – 2025</div></summary><div class="job-content"><ul>
         <li>Led cross-functional Kaizen events that increased production efficiency by 37% and generated approximately $500K in annual cost savings.</li>
         <li>Managed multiple concurrent improvement projects using Accolade software, tracking progress and aligning initiatives with business goals.</li>
         <li>Developed, updated, and standardized 100+ SOPs to align with Lean principles and quality/compliance standards.</li>
@@ -278,41 +329,24 @@
         <li>Automated real-time KPI dashboards using SAP and GoalPost, reducing reporting time by 40%.</li>
         <li>Supported internal audits and conducted access-control reviews in coordination with IT and security teams.</li>
       </ul>
-      <div class="chip-row"><span class="chip">Transferable: Access Control Review</span><span class="chip">Compliance Audit Support</span></div>
-    </div>
+      <div class="chip-row"><span class="chip">Transferable: Access Control Review</span><span class="chip">Compliance Audit Support</span></div></div></details>
 
-    <div class="job">
-      <h3>Lead Operational Excellence Coordinator</h3>
-      <div class="meta">2021 – 2023</div>
-      <ul>
+    <details class="job job-details"><summary><h3>Lead Operational Excellence Coordinator</h3><div class="meta">2021 – 2023</div></summary><div class="job-content"><ul>
         <li>Conducted time-motion studies and implemented workflow changes that reduced warehouse processing time by 25%.</li>
         <li>Assisted in the rollout of barcode-scanning technology integrated with ERP systems, improving inventory tracking accuracy.</li>
         <li>Authored SOPs for logistics workflows aligned with ISO standards and company compliance policies.</li>
         <li>Trained and coached employees on Lean fundamentals (7 Wastes, 5S, PDCA, SMED, visual management); led standardized work audits and Gemba walks.</li>
-      </ul>
-    </div>
+      </ul></div></details>
 
-    <div class="job">
-      <h3>Value Added Logistics Clerk</h3>
-      <div class="meta">04/2020 – 03/2021</div>
-      <ul><li>Verified, received, and counted stock items; reconciled physical counts against system records and investigated discrepancies.</li></ul>
-    </div>
+    <details class="job job-details"><summary><h3>Value Added Logistics Clerk</h3><div class="meta">04/2020 – 03/2021</div></summary><div class="job-content"><ul><li>Verified, received, and counted stock items; reconciled physical counts against system records and investigated discrepancies.</li></ul></div></details>
 
-    <div class="job">
-      <h3>Shipping and Picking Logistics Associate</h3>
-      <div class="meta">02/2018 – 04/2020</div>
-      <ul><li>Performed data entry and order processing in SAP, including generating deliveries and transfer orders; prepared shipping documentation.</li></ul>
-    </div>
+    <details class="job job-details"><summary><h3>Shipping and Picking Logistics Associate</h3><div class="meta">02/2018 – 04/2020</div></summary><div class="job-content"><ul><li>Performed data entry and order processing in SAP, including generating deliveries and transfer orders; prepared shipping documentation.</li></ul></div></details>
 
     <h3>Utility Automation Solutions — Dublin, OH</h3>
-    <div class="job">
-      <h3>Cybersecurity Intern (Evening)</h3>
-      <div class="meta">Dates pending confirmation</div>
-      <ul>
+    <details class="job job-details"><summary><h3>Cybersecurity Intern (Evening)</h3><div class="meta">Dates pending confirmation</div></summary><div class="job-content"><ul>
         <li>Reviewed and edited IT security policies alongside an engineering firm's cybersecurity team, validating alignment with client and insurance requirements.</li>
         <li>Evaluated access controls, data-flow controls, and third-party security software to help identify and reduce cyber risk exposure.</li>
-      </ul>
-    </div>
+      </ul></div></details>
   </div>
 </section>
 
@@ -322,15 +356,15 @@
     <div class="section-head">
       <span class="eyebrow">Cybersecurity Portfolio</span>
       <h2>Professional GRC experience + hands-on lab work</h2>
-      <p class="lead">A combination of real workplace GRC experience and lab work across the core disciplines of modern security operations.</p>
+      <p class="lead">My security foundation combines workplace documentation and audit work, a cybersecurity degree, and projects built to practice analysis, investigation, and recovery planning.</p>
     </div>
     <div class="grid grid-3">
-      <div class="card"><h3>Governance, Risk &amp; Compliance</h3><p>Access control review, audit support, and NIST CSF / ISO 27001-based risk assessment.</p></div>
-      <div class="card"><h3>Network Security</h3><p>Traffic analysis (Wireshark), network fundamentals, misconfiguration and attack-vector identification.</p></div>
-      <div class="card"><h3>Security Assessments &amp; Labs</h3><p>Vulnerability assessment and ethical-hacking simulation using Kali Linux, Metasploit, and Nessus.</p></div>
-      <div class="card"><h3>Application Security</h3><p>Testing for SQL injection, XSS, and CSRF; secure coding and input-validation practices.</p></div>
-      <div class="card"><h3>Cloud &amp; Systems Security</h3><p>AWS/Azure environment security; Windows Server &amp; Active Directory administration.</p></div>
-      <div class="card"><h3>SOC-Related Capabilities</h3><p>SIEM monitoring and log analysis using Splunk — alert rules and anomaly detection.</p></div>
+      <details class="card portfolio-card"><summary><h3>Governance, Risk &amp; Compliance</h3><span class="portfolio-hint">Risk assessments, audits, and recovery planning</span></summary><p>My academic risk assessments use frameworks such as NIST CSF to identify assets, threats, impacts, and practical controls. In operations, I have supported audits through clear procedures, records, and follow-up. My capstone brought those habits together in a disaster recovery and incident response program for a small manufacturer.</p></details>
+      <details class="card portfolio-card"><summary><h3>Network Security</h3><span class="portfolio-hint">Traffic analysis and service discovery</span></summary><p>In coursework and labs, I use Wireshark and tcpdump to inspect traffic and Nmap to understand exposed services. I document what the evidence shows, distinguish expected behavior from suspicious activity, and connect findings to an investigation question.</p></details>
+      <details class="card portfolio-card"><summary><h3>Security Assessments &amp; Labs</h3><span class="portfolio-hint">Scoped testing and documented findings</span></summary><p>I practice assessment in authorized lab environments, from scoping and reconnaissance to recording findings and proposing fixes. Kali Linux and common testing tools help me learn the workflow, while the written evidence and remediation advice make the results useful.</p></details>
+      <details class="card portfolio-card"><summary><h3>Application Security</h3><span class="portfolio-hint">Web risks and secure development practices</span></summary><p>My coursework covers common web application risks, including injection, input validation, and authentication weaknesses. I use guided labs and tools such as Burp Suite to understand how a flaw appears, how to reproduce it safely, and what a developer can change to reduce the risk.</p></details>
+      <details class="card portfolio-card"><summary><h3>Cloud &amp; Systems Security</h3><span class="portfolio-hint">Access, policy, and system configuration</span></summary><p>Windows Server and Active Directory exercises taught me how accounts, groups, policies, and permissions affect access. Cloud coursework and AWS labs introduced the same questions in hosted systems: who can reach a resource, how it is configured, and how changes are tracked.</p></details>
+      <details class="card portfolio-card"><summary><h3>SOC Investigation Practice</h3><span class="portfolio-hint">Alert correlation and manual investigation</span></summary><p>My SOC alert triage project processes synthetic alerts, groups related events, and maps activity to MITRE ATT&amp;CK. I also manually decoded a suspicious PowerShell command and documented why the related events warranted escalation. <a href="#case-studies">Read the case study</a>.</p></details>
     </div>
   </div>
 </section>
@@ -341,20 +375,20 @@
     <div class="section-head">
       <span class="eyebrow">Operational Excellence Portfolio</span>
       <h2>Four years of Lean Six Sigma leadership</h2>
-      <p class="lead">And the direct line between operational discipline and security discipline.</p>
+      <p class="lead">I use Lean methods to make work visible, remove friction, and turn improvements into repeatable practice. Those same habits help security teams investigate consistently and maintain reliable controls.</p>
     </div>
     <div class="grid grid-3">
-      <div class="card"><h3>Kaizen &amp; Continuous Improvement</h3><p>Cross-functional Kaizen leadership — 37% efficiency gain.</p></div>
-      <div class="card"><h3>Root-Cause Analysis</h3><p>PDCA-based problem solving applied to recurring operational issues.</p></div>
-      <div class="card"><h3>SOP Development</h3><p>100+ SOPs authored and standardized across departments.</p></div>
-      <div class="card"><h3>5S &amp; Waste Reduction</h3><p>Trained and coached teams on 5S, 7 Wastes, SMED, visual management.</p></div>
-      <div class="card"><h3>Training &amp; Coaching</h3><p>100+ employees trained on new processes and improvement tools.</p></div>
-      <div class="card"><h3>Operational Metrics</h3><p>KPI dashboard automation — 40% faster reporting.</p></div>
+      <details class="card portfolio-card"><summary><h3>Kaizen &amp; Continuous Improvement</h3><span class="portfolio-hint">Picking process improvement at Honeywell</span></summary><p>At Honeywell, I worked with the picking team to study delays, redesign the flow, and train leads and clerks on the new process. Pick rate improved from 7 to 11 lines per hour. I focus on changes the team can sustain after an event ends.</p></details>
+      <details class="card portfolio-card"><summary><h3>Root-Cause Analysis</h3><span class="portfolio-hint">Observe, test causes, and verify fixes</span></summary><p>I start with direct observation, ask where the process breaks down, and test causes with the people doing the work. In PIP's Electrical Safety area, that means mapping picking, staging, and shipping steps before recommending a fix for missed orders.</p></details>
+      <details class="card portfolio-card"><summary><h3>SOP Development</h3><span class="portfolio-hint">Standard work through system change</span></summary><p>During the transition from SAP to Eclipse, I document the steps teams need to perform reliably, including order creation and staging. A useful SOP names the action, the decision point, and what to do when the normal path fails.</p></details>
+      <details class="card portfolio-card"><summary><h3>5S &amp; Waste Reduction</h3><span class="portfolio-hint">Visual controls and waste walks</span></summary><p>I help teams make work areas easier to navigate through visual controls, staging signs, floor markings, and waste walks. Those walks capture concrete issues such as unnecessary travel, missing material, and labels that create rework.</p></details>
+      <details class="card portfolio-card"><summary><h3>Training &amp; Coaching</h3><span class="portfolio-hint">Practical coaching across shifts</span></summary><p>I coach associates and leaders across shifts on standard work and the eight wastes. I use examples from their own work so training leads to observations, questions, and small improvements on the floor.</p></details>
+      <details class="card portfolio-card"><summary><h3>Operational Metrics</h3><span class="portfolio-hint">Reporting that helps teams act</span></summary><p>I use reports and simple trackers to expose delays and follow the effect of a change. In a value-added logistics area, I consolidated daily reporting from roughly an hour to 10–15 minutes, leaving more time to act on the information.</p></details>
     </div>
-    <div class="callout">
-      <h3>Why this strengthens my cybersecurity capabilities</h3>
-      <p>Every one of these disciplines maps directly onto security operations: root-cause analysis is incident response; SOP development is policy and procedure writing; 5S and standardized work are the operational backbone of configuration and change management; audit support is GRC. I'm not learning these concepts for the first time in a security context — I'm applying them in a new domain.</p>
-    </div>
+    <details class="callout portfolio-connection">
+      <summary><h3>Why this strengthens my cybersecurity capabilities</h3><span>See how the disciplines connect</span></summary>
+      <p>In operations, I observe a failure, preserve the facts, find its cause, change the process, and check whether the change holds. Security investigations follow a similar discipline: collect evidence, determine scope and cause, document a response, and verify the control. SOPs make both workflows repeatable; audits and metrics show whether the practice matches the written procedure. My technical security training adds the domain knowledge needed to apply that discipline to systems and alerts.</p>
+    </details>
   </div>
 </section>
 
@@ -408,7 +442,7 @@
     <div class="job">
       <h3>Bachelor of Science in Cybersecurity</h3>
       <div class="meta">Franklin University — Columbus, OH &middot; Graduated December 2025</div>
-      <p><strong>GPA: 3.94 &middot; Summa Cum Laude</strong> &middot; Franklin University President's List (Fall 2023, Summer 2024)</p>
+      <p><strong>GPA: 3.94 &middot; Summa Cum Laude</strong> &middot; Franklin University President's List (Fall 2023, Spring 2024, Summer 2024, Spring 2025, Summer 2025, Fall 2025)</p>
       <p>Relevant coursework: Network Security, Ethical Hacking, Cryptography, Access Control, Cybersecurity Fundamentals, Information Systems Architecture &amp; Technology, Digital Forensics, Information Assurance, Security Risk Management.</p>
       <p>Capstone: Windows Infrastructure Migration &amp; Security Proposal (see Case Studies).</p>
     </div>
@@ -458,22 +492,19 @@
       <span class="eyebrow">Technical Skills</span>
       <h2>Skills matrix</h2>
     </div>
-    <table>
-      <thead><tr><th>Category</th><th>Skills</th></tr></thead>
-      <tbody>
-        <tr><td>Security Tools</td><td>Kali Linux, Wireshark, Metasploit, Nessus, Burp Suite, Splunk</td></tr>
-        <tr><td>Networking</td><td>TCP/IP fundamentals, network traffic analysis, Cisco Packet Tracer</td></tr>
-        <tr><td>Operating Systems</td><td>Windows Server, Active Directory, Linux</td></tr>
-        <tr><td>Cloud Platforms</td><td>AWS (security fundamentals), Azure (security fundamentals)</td></tr>
-        <tr><td>Security Frameworks</td><td>NIST CSF, ISO/IEC 27001</td></tr>
-        <tr><td>Programming &amp; Scripting</td><td>PowerShell, Python (cybersecurity-focused coursework)</td></tr>
-        <tr><td>Data &amp; Reporting</td><td>Microsoft Excel (Advanced), SAP, GoalPost, KPI dashboard development</td></tr>
-        <tr><td>Operational Excellence</td><td>Lean Six Sigma (Green Belt), Kaizen, 5S, PDCA, root-cause analysis, SOP development</td></tr>
-        <tr><td>Project Management</td><td>Agile Scrum fundamentals, cross-functional project coordination</td></tr>
-        <tr><td>Business Systems</td><td>SAP, Accolade, ERP/barcode-integrated inventory systems</td></tr>
-        <tr><td>AI Tools</td><td>Practical familiarity from coursework — no production AI-deployment experience claimed</td></tr>
-      </tbody>
-    </table>
+    <div class="skills-grid">
+      <details class="skill-group"><summary>Security Tools</summary><p>Kali Linux, Wireshark, Metasploit, Nessus, Burp Suite, Splunk</p></details>
+      <details class="skill-group"><summary>Networking</summary><p>TCP/IP fundamentals, network traffic analysis, Cisco Packet Tracer</p></details>
+      <details class="skill-group"><summary>Operating Systems</summary><p>Windows Server, Active Directory, Linux</p></details>
+      <details class="skill-group"><summary>Cloud Platforms</summary><p>AWS (security fundamentals), Azure (security fundamentals)</p></details>
+      <details class="skill-group"><summary>Security Frameworks</summary><p>NIST CSF, ISO/IEC 27001</p></details>
+      <details class="skill-group"><summary>Programming &amp; Scripting</summary><p>PowerShell, Python (cybersecurity-focused coursework)</p></details>
+      <details class="skill-group"><summary>Data &amp; Reporting</summary><p>Microsoft Excel (Advanced), SAP, GoalPost, KPI dashboard development</p></details>
+      <details class="skill-group"><summary>Operational Excellence</summary><p>Lean Six Sigma (Green Belt), Kaizen, 5S, PDCA, root-cause analysis, SOP development</p></details>
+      <details class="skill-group"><summary>Project Management</summary><p>Agile Scrum fundamentals, cross-functional project coordination</p></details>
+      <details class="skill-group"><summary>Business Systems</summary><p>SAP, Accolade, ERP/barcode-integrated inventory systems</p></details>
+      <details class="skill-group"><summary>AI Tools</summary><p>Practical familiarity from coursework — no production AI-deployment experience claimed</p></details>
+    </div>
   </div>
 </section>
 
@@ -485,10 +516,19 @@
       <h2>Academic and professional honors</h2>
     </div>
     <div class="grid grid-2">
-      <div class="card"><h3>Franklin University President's List</h3><p>Fall 2023, Summer 2024</p></div>
+      <div class="card"><h3>Franklin University President's List</h3><p>Fall 2023 · Spring 2024 · Summer 2024 · Spring 2025 · Summer 2025 · Fall 2025</p></div>
       <div class="card"><h3>Summa Cum Laude</h3><p>Bachelor of Science in Cybersecurity — 3.94 GPA</p></div>
       <div class="card"><h3>Phi Theta Kappa Honor Society</h3><p>Columbus State Community College</p></div>
       <div class="card"><h3>Lean Six Sigma Green Belt</h3><p>Honeywell International — April 2022</p></div>
+      <details class="card recommendations">
+        <summary><h3>Recommendation Letters</h3><span>Four letters from academic mentors and Phi Theta Kappa</span></summary>
+        <ul>
+          <li><a href="letters/ptk-recommendation.pdf" target="_blank" rel="noopener">Phi Theta Kappa recommendation (PDF)</a><span>Phi Theta Kappa Honor Society · 2 pages</span></li>
+          <li><a href="letters/franklin-laurie-crawford.pdf" target="_blank" rel="noopener">Professor Laurie Crawford (PDF)</a><span>Franklin University · COMP 281 · July 2025</span></li>
+          <li><a href="letters/franklin-tracey-boggs-walsh.pdf" target="_blank" rel="noopener">Professor Tracey Boggs-Walsh (PDF)</a><span>Franklin University · Introduction to Cybersecurity · July 2025</span></li>
+          <li><a href="letters/franklin-dewin-andujar.pdf" target="_blank" rel="noopener">Professor Dewin Andujar (PDF)</a><span>Franklin University · CYSC 300 · July 2025</span></li>
+        </ul>
+      </details>
     </div>
   </div>
 </section>
@@ -535,7 +575,7 @@
         <label for="cf-message">Message</label>
         <textarea id="cf-message" name="message" required></textarea>
         <div class="btn-row"><button type="submit" class="btn btn-teal">Send Message</button></div>
-        <p class="form-note" id="cf-status" role="status"></p>
+        <p class="form-note" id="cf-status" role="status">Submitting opens your email app with a prepared message.</p>
       </form>
     </div>
   </div>
@@ -598,12 +638,16 @@ window.addEventListener('scroll', () => {
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
-// ---- Contact form (no backend — front-end only demo) ----
+// ---- Contact form opens the visitor's email app ----
 function handleContactSubmit(e){
   e.preventDefault();
-  document.getElementById('cf-status').textContent =
-    "Thanks for reaching out — I'll get back to you as soon as possible. (Note: connect this form to an email service or backend to make it live.)";
-  e.target.reset();
+  const name = document.getElementById('cf-name').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  const org = document.getElementById('cf-org').value.trim();
+  const message = document.getElementById('cf-message').value.trim();
+  const body = `From: ${name} (${email})\nOrganization: ${org || 'Not provided'}\n\n${message}`;
+  window.location.href = `mailto:samra8293101@yahoo.com?subject=${encodeURIComponent('Portfolio message from ' + name)}&body=${encodeURIComponent(body)}`;
+  document.getElementById('cf-status').textContent = 'Your email app should open. Please send the prepared message there.';
 }
 
 // ---- Case studies data & accordion ----
