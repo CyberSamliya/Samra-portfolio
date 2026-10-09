@@ -218,7 +218,19 @@
   .gform-embed iframe{display:block;width:100%;min-height:900px;border:0;}
 
 :root{--teal:#167569;--bg:#f6f5f1;--border:#dedfd9;--text2:#525e68;--radius:16px}
-#home h1,#home .eyebrow,#home .tagline{color:var(--ink,var(--navy))}#home .lead{color:var(--text2)}#home .btn-primary{background:var(--navy);color:#fff}#home .btn-outline{border-color:var(--navy);color:var(--navy)}#home .btn-outline:hover{background:var(--navy);color:#fff}#home{background:radial-gradient(ellipse at 90% 25%,#dcebe4 0,transparent 55%);padding-top:76px}h1{font-size:clamp(2rem,4vw,3.2rem);max-width:20ch}section{scroll-margin-top:90px}.hero-card{box-shadow:14px 14px 0 #dae4df;border-top:5px solid var(--teal)}.route-card{text-decoration:none;color:var(--text)}.route-card:hover{transform:translateY(-3px)}.nav-links{gap:17px}.nav-links a{font-size:.86rem}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #ad611b;outline-offset:4px}#start-here{padding:42px 0}#start-here h2{margin-bottom:24px}.cs-item.open .cs-body{max-height:none!important}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+#home h1,#home .eyebrow,#home .tagline{color:var(--ink,var(--navy))}#home .lead{color:var(--text2)}#home .btn-primary{background:var(--navy);color:#fff}#home .btn-outline{border-color:var(--navy);color:var(--navy)}#home .btn-outline:hover{background:var(--navy);color:#fff}#home{background:radial-gradient(ellipse at 90% 25%,#dcebe4 0,transparent 55%);padding-top:76px}h1{font-size:clamp(2rem,4vw,3.2rem);max-width:20ch}section{scroll-margin-top:90px}.hero-card{box-shadow:14px 14px 0 #dae4df;border-top:5px solid var(--teal)}.route-card{text-decoration:none;color:var(--text);transition:transform .15s,box-shadow .2s}.route-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(20,33,61,.12)}
+/* Active nav link (scrollspy) */
+.nav-links a.active{color:var(--teal)}
+.nav-links a.active::after{content:"";display:block;height:2px;background:var(--teal);border-radius:2px;margin-top:2px}
+@media(max-width:900px){.nav-links a.active::after{display:none}}
+/* Scroll reveal */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+/* Back to top */
+#toTop{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:90;width:46px;height:46px;border-radius:50%;border:none;background:var(--navy);color:#fff;font-size:1.3rem;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,33,61,.3);opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s,transform .15s}
+#toTop.show{opacity:1;visibility:visible}
+#toTop:hover{transform:translateY(-2px)}.nav-links{gap:17px}.nav-links a{font-size:.86rem}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #ad611b;outline-offset:4px}#start-here{padding:42px 0}#start-here h2{margin-bottom:24px}.cs-item.open .cs-body{max-height:none!important}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -661,6 +673,8 @@
   </div>
 </footer>
 
+<button id="toTop" type="button" aria-label="Back to top" title="Back to top">&uarr;</button>
+
 <script>
 // ---- Nav toggle ----
 const navToggle = document.getElementById('navToggle');
@@ -682,6 +696,57 @@ window.addEventListener('scroll', () => {
 });
 
 document.getElementById('year').textContent = new Date().getFullYear();
+
+// ---- Scrollspy: highlight the nav link for the section in view ----
+(function(){
+  const links = Array.from(document.querySelectorAll('.nav-links a[href^="#"]'));
+  const map = {};
+  links.forEach(a => { const id = a.getAttribute('href').slice(1); if(id) map[id] = a; });
+  const sections = Object.keys(map).map(id => document.getElementById(id)).filter(Boolean);
+  if(!sections.length) return;
+  const spy = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        links.forEach(l => l.classList.remove('active'));
+        const active = map[e.target.id];
+        if(active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  sections.forEach(s => spy.observe(s));
+})();
+
+// ---- Scroll reveal: fade sections up as they enter view ----
+(function(){
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const targets = document.querySelectorAll('section > .container, #start-here .container');
+  if(reduce || !('IntersectionObserver' in window)){ return; } // content stays fully visible
+  targets.forEach(t => t.classList.add('reveal'));
+  const io = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); obs.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  targets.forEach(t => io.observe(t));
+  // Safety: if anything is still hidden after load, reveal it
+  window.addEventListener('load', () => setTimeout(() => {
+    document.querySelectorAll('.reveal:not(.in)').forEach(el => {
+      const r = el.getBoundingClientRect();
+      if(r.top < window.innerHeight) el.classList.add('in');
+    });
+  }, 300));
+})();
+
+// ---- Back to top ----
+(function(){
+  const btn = document.getElementById('toTop');
+  if(!btn) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('show', window.scrollY > 600);
+  }, { passive: true });
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+})();
 
 // ---- Hero stat count-up (one tasteful load animation; respects reduced-motion) ----
 (function(){
