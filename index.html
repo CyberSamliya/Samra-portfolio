@@ -250,10 +250,10 @@
         <a href="#contact" class="btn btn-outline">Let's Connect &rarr;</a>
       </div>
       <div class="stat-row">
-        <div class="stat"><div class="num">3.94</div><div class="label">GPA · Summa Cum Laude</div></div>
-        <div class="stat"><div class="num">37%</div><div class="label">Efficiency Gain</div></div>
-        <div class="stat"><div class="num">100+</div><div class="label">SOPs Standardized</div></div>
-        <div class="stat"><div class="num">4+ yrs</div><div class="label">OE Leadership</div></div>
+        <div class="stat"><div class="num" data-count="3.94" data-decimals="2">3.94</div><div class="label">GPA · Summa Cum Laude</div></div>
+        <div class="stat"><div class="num" data-count="37" data-suffix="%">37%</div><div class="label">Efficiency Gain</div></div>
+        <div class="stat"><div class="num" data-count="100" data-suffix="+">100+</div><div class="label">SOPs Standardized</div></div>
+        <div class="stat"><div class="num" data-count="4" data-prefix="" data-suffix="+ yrs">4+ yrs</div><div class="label">OE Leadership</div></div>
       </div>
     </div>
     <div class="hero-card">
@@ -682,6 +682,36 @@ window.addEventListener('scroll', () => {
 });
 
 document.getElementById('year').textContent = new Date().getFullYear();
+
+// ---- Hero stat count-up (one tasteful load animation; respects reduced-motion) ----
+(function(){
+  const nums = document.querySelectorAll('.stat .num[data-count]');
+  if(!nums.length) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const render = (el, val) => {
+    const dec = parseInt(el.dataset.decimals || '0', 10);
+    const pre = el.dataset.prefix || '';
+    const suf = el.dataset.suffix || '';
+    el.textContent = pre + val.toFixed(dec) + suf;
+  };
+  if(reduce){ nums.forEach(el => render(el, parseFloat(el.dataset.count))); return; }
+  const run = el => {
+    const target = parseFloat(el.dataset.count);
+    const dur = 1100, start = performance.now();
+    const step = now => {
+      const p = Math.min((now - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out
+      render(el, target * eased);
+      if(p < 1) requestAnimationFrame(step);
+      else render(el, target);
+    };
+    requestAnimationFrame(step);
+  };
+  const io = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => { if(e.isIntersecting){ run(e.target); obs.unobserve(e.target); } });
+  }, { threshold: 0.4 });
+  nums.forEach(el => io.observe(el));
+})();
 
 // ---- Contact form opens the visitor's email app ----
 function handleContactSubmit(e){
