@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOC Triage Case Log | Samra Ayele</title>
+<meta name="description" content="Dated SOC alert triage case reports from Samra Ayele's home lab and SOC Alert Triage Tool: evidence, classification, MITRE ATT&amp;CK mapping, and recommendations.">
+<meta name="robots" content="index, follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2314213D'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'%3ESA%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --navy:#14213D; --slate:#1A2B4C; --teal:#2A9D8F; --amber:#C97A2B;
+    --bg:#F7F8FA; --card:#FFFFFF; --text:#1F2430; --text2:#5B6472; --border:#E2E5EA;
+    --radius:12px; --maxw:1000px;
+    --code:#0B3D4A; --codebg:#EDF3F2;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.6;}
+  a{color:var(--teal);}
+  h1,h2,h3,h4{color:var(--slate); line-height:1.2; margin:0 0 .5em;}
+  h1{font-size:2.3rem; font-weight:800; letter-spacing:-.02em;}
+  h2{font-size:1.45rem; font-weight:800; letter-spacing:-.01em;}
+  p{margin:0 0 1em;}
+  code{font-family:var(--mono); font-size:.85em; color:var(--code); background:var(--codebg); padding:1px 6px; border-radius:5px; word-break:break-word;}
+  .container{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+  .eyebrow{text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:700; color:var(--teal); margin-bottom:.5em; display:block;}
+
+  /* NAV (matches index.html) */
+  header.site-header{position:sticky; top:0; z-index:100; background:rgba(247,248,250,.92); backdrop-filter:blur(6px); border-bottom:1px solid var(--border); transition:box-shadow .2s;}
+  header.site-header.scrolled{box-shadow:0 2px 12px rgba(20,33,61,.08);}
+  nav.navbar{display:flex; align-items:center; justify-content:space-between; max-width:1200px; margin:0 auto; padding:14px 24px;}
+  .brand{font-weight:800; color:var(--navy); text-decoration:none; font-size:1.1rem;}
+  .nav-links{display:flex; gap:22px; list-style:none; margin:0; padding:0; align-items:center;}
+  .nav-links a{color:var(--text); text-decoration:none; font-size:.92rem; font-weight:600;}
+  .nav-links a:hover, .nav-links a.current{color:var(--teal);}
+  .nav-cta{background:var(--navy); color:#fff !important; padding:9px 16px; border-radius:8px;}
+  .nav-toggle{display:none; background:none; border:none; font-size:1.6rem; color:var(--navy); cursor:pointer;}
+  @media(max-width:900px){
+    .nav-links{display:none; position:absolute; top:100%; left:0; right:0; background:#fff; flex-direction:column; padding:16px 24px; border-bottom:1px solid var(--border); gap:14px;}
+    .nav-links.open{display:flex;}
+    .nav-toggle{display:block;}
+  }
+
+  .page-head{padding:48px 0 8px;}
+  .page-head .lead{font-size:1.08rem; color:var(--text2); max-width:760px;}
+  .back{display:inline-block; font-size:.85rem; font-weight:600; margin-bottom:1.2em;}
+  .note{margin:16px 0 0; background:#FBF1E5; border:1px solid #EAC9A0; color:#7A4E18; border-radius:10px; padding:11px 15px; font-size:.86rem;}
+
+  /* CASE INDEX */
+  .index{margin-top:28px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; min-width:620px; font-size:.88rem;}
+  th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text2); background:#FAFBFC;}
+  tr:last-child td{border-bottom:0;}
+  td.mono{font-family:var(--mono); font-size:.8rem; white-space:nowrap;}
+
+  /* BADGES */
+  .badge{display:inline-block; font-size:.7rem; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap;}
+  .b-crit{background:#FBE7E7; color:#A12A2A; border:1px solid #A12A2A;}
+  .b-med{background:#FBEEE2; color:var(--amber); border:1px solid var(--amber);}
+  .b-open{background:#F0F1F3; color:var(--text2); border:1px solid var(--border);}
+  .b-closed{background:#E4F4F1; color:var(--teal); border:1px solid var(--teal);}
+  .b-lab{background:#EEF1FA; color:#3F51B5; border:1px solid #3F51B5;}
+
+  /* CASE CARDS */
+  article.case{margin-top:36px; background:var(--card); border:1px solid var(--border); border-left:5px solid var(--teal); border-radius:var(--radius); padding:26px 28px; scroll-margin-top:84px;}
+  article.case .case-id{font-family:var(--mono); font-size:.8rem; color:var(--text2);}
+  article.case h2{margin-top:4px;}
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:14px 0 6px;}
+  .fact{background:#F7F9FA; border:1px solid var(--border); border-radius:10px; padding:9px 12px;}
+  .fact span{display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text2); font-weight:700;}
+  .fact strong{font-size:.9rem; color:var(--slate);}
+  article.case h3{font-size:.82rem; text-transform:uppercase; letter-spacing:.06em; color:var(--slate); margin:1.4em 0 .4em;}
+  article.case p, article.case li{font-size:.93rem; color:var(--text2);}
+  article.case ul, article.case ol{padding-left:20px; margin:0 0 1em;}
+  article.case .index{margin-top:6px;}
+  .label{font-weight:700; font-size:.72rem; letter-spacing:.04em;}
+
+  footer{background:var(--navy); color:#fff; padding:44px 0 22px; margin-top:52px;}
+  footer a{color:#cfe8e4; text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+  .footer-grid{display:grid; grid-template-columns:1.6fr 1fr; gap:32px; max-width:1200px; margin:0 auto; padding:0 24px;}
+  .footer-grid h3{color:#fff;}
+  .footer-grid h4{color:#fff; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.8em;}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,.15); margin:30px auto 0; padding:18px 24px 0; font-size:.8rem; color:#B9C4D6; max-width:1200px;}
+  @media(max-width:800px){.footer-grid{grid-template-columns:1fr;}}
+  @media(max-width:620px){h1{font-size:1.8rem;} article.case{padding:20px 18px;}}
+  a:focus-visible,button:focus-visible{outline:3px solid #ad611b; outline-offset:4px;}
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto !important; transition:none !important;}}
+</style>
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <nav class="navbar" aria-label="Primary">
+    <a href="index.html#home" class="brand">Samra Ayele</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">&#9776;</button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#case-studies">Projects</a></li>
+      <li><a href="triage-cases.html" class="current" aria-current="page">Triage Cases</a></li>
+      <li><a href="index.html#build-deployment">Home Lab</a></li>
+      <li><a href="commands.html">Command Reference</a></li>
+      <li><a href="index.html#request-access" class="nav-cta">Request Access</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main class="container">
+  <div class="page-head">
+    <a class="back" href="index.html#case-studies">&larr; Back to project case studies</a>
+    <span class="eyebrow">SOC Alert Triage Tool &middot; Case Log</span>
+    <h1>Triage case reports, by date</h1>
+    <p class="lead">Each case follows the same Tier 1 workflow: validate the alert, gather evidence, identify indicators, map only evidence-supported behavior to MITRE ATT&amp;CK, classify, and recommend next steps. Newest cases first.</p>
+    <p class="note"><strong>Scope and honesty:</strong> all cases come from my own home lab, synthetic training data, or systems I own. None is professional SOC employment. Each case states its data source, and confidence is labeled CONFIRMED, LIKELY, POSSIBLE, or UNKNOWN.</p>
+  </div>
+
+  <div class="index" role="region" aria-label="Case index" tabindex="0">
+    <table>
+      <thead><tr><th>Date</th><th>Case ID</th><th>Case</th><th>Data source</th><th>Severity</th><th>Classification</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">2026-10-09</td>
+          <td class="mono"><a href="#SOC-TRI-20261009-01">SOC-TRI-20261009-01</a></td>
+          <td>Web exposure triage of a community website I own</td>
+          <td>Live site I own (passive review)</td>
+          <td><span class="badge b-med">Medium</span></td>
+          <td>Security weaknesses, no malicious activity</td>
+          <td><span class="badge b-open">Open: remediation</span></td>
+        </tr>
+        <tr>
+          <td class="mono">2026-09-22</td>
+          <td class="mono"><a href="#SOC-TRI-20260922-01">SOC-TRI-20260922-01</a></td>
+          <td>25 alerts correlated into 10 incidents; Incident 4 escalated</td>
+          <td><span class="badge b-lab">Synthetic lab data</span></td>
+          <td><span class="badge b-crit">Critical</span></td>
+          <td>True Positive (simulated)</td>
+          <td><span class="badge b-closed">Closed: escalated</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CASE: 2026-10-09 -->
+  <article class="case" id="SOC-TRI-20261009-01">
+    <div class="case-id">SOC-TRI-20261009-01 &middot; Opened 2026-10-09</div>
+    <h2>Web exposure triage: Habesha Hub community website</h2>
+    <div class="facts">
+      <div class="fact"><span>Asset</span><strong><a href="https://cybersamliya.github.io/habesha-hub/" target="_blank" rel="noopener">Habesha Hub</a> (GitHub Pages)</strong></div>
+      <div class="fact"><span>Trigger</span><strong>Scheduled self-review of an owned site</strong></div>
+      <div class="fact"><span>Method</span><strong>Passive, read-only page review</strong></div>
+      <div class="fact"><span>Highest severity</span><strong>Medium</strong></div>
+      <div class="fact"><span>Findings</span><strong>1 Medium, 5 Low, 1 Unknown</strong></div>
+      <div class="fact"><span>Status</span><strong>Open: remediation in progress</strong></div>
+    </div>
+
+    <h3>Summary</h3>
+    <p>A passive triage of a community resource site I built and own found no signs of compromise or malicious activity. It did find seven weaknesses: one Medium (privacy policy gaps), five Low, and one untested area (HTTP security headers).</p>
+
+    <h3>Scope and authorization</h3>
+    <p>I own and maintain the site. Review was read-only: page fetches only, with no scanning, form submissions, or login attempts. Reviewed pages: homepage, Ohio directory, privacy policy, daily tools, and one empty state page.</p>
+
+    <h3>Findings</h3>
+    <div class="index">
+      <table>
+        <thead><tr><th>ID</th><th>Finding</th><th>Severity</th><th>Confidence</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          <tr><td>F1</td><td>A personal account handle is visible in a linked preview URL (details withheld here)</td><td>Low</td><td class="label">CONFIRMED</td><td>Move the preview to a neutral domain</td></tr>
+          <tr><td>F2</td><td>Privacy policy omits browser storage, analytics, retention period, and a direct contact</td><td>Medium</td><td class="label">CONFIRMED</td><td>Add those disclosures</td></tr>
+          <tr><td>F3</td><td>Footer links 40 of 51 state pages while the site claims all 50 states plus DC</td><td>Low</td><td class="label">CONFIRMED</td><td>Link all pages or relabel</td></tr>
+          <tr><td>F4</td><td>Blank date, year, and zero counts shown when JavaScript is off</td><td>Low</td><td class="label">LIKELY</td><td>Add static fallback values</td></tr>
+          <tr><td>F5</td><td>Five directory records with weak or conflicting sources</td><td>Low</td><td class="label">CONFIRMED</td><td>Re-verify or downgrade status</td></tr>
+          <tr><td>F6</td><td>"Skip to tool" link may target a missing anchor</td><td>Low</td><td class="label">POSSIBLE</td><td>Test in a browser</td></tr>
+          <tr><td>F7</td><td>HTTP security headers not tested; no meta Content-Security-Policy seen</td><td>Info</td><td class="label">UNKNOWN</td><td>Run a header check; add a meta CSP</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Indicators of compromise</h3>
+    <p>None. No evidence of defacement, injected scripts, or unexpected third-party code was observed in the reviewed pages.</p>
+
+    <h3>MITRE ATT&amp;CK</h3>
+    <p>No adversary activity was observed, so no technique is mapped as observed behavior. As a risk note only, F1 is the kind of exposure that supports Reconnaissance: Gather Victim Identity Information, Email Addresses (T1589.002).</p>
+
+    <h3>Classification</h3>
+    <p>Not an attack. These are security and quality weaknesses on an owned asset, handled as remediation items rather than an incident.</p>
+
+    <h3>Next steps</h3>
+    <ol>
+      <li>Fix F2 (privacy disclosures) and F1 (preview URL).</li>
+      <li>Run a header check from the lab Kali VM and add a meta Content-Security-Policy.</li>
+      <li>Fix the remaining Low items, then re-run this triage to verify closure.</li>
+    </ol>
+
+    <h3>Lessons learned</h3>
+    <p>A small static site still has an attack surface: linked URLs, third-party forms, and policy pages. Labeling each finding with a confidence level kept what I observed separate from what I assumed.</p>
+  </article>
+
+  <!-- CASE: 2026-09-22 -->
+  <article class="case" id="SOC-TRI-20260922-01">
+    <div class="case-id">SOC-TRI-20260922-01 &middot; Opened 2026-09-22</div>
+    <h2>Alert batch triage: brute force to encoded PowerShell download cradle</h2>
+    <div class="facts">
+      <div class="fact"><span>Data source</span><strong>Synthetic Wazuh/Security Onion-style export</strong></div>
+      <div class="fact"><span>Volume</span><strong>25 alerts, 10 incidents</strong></div>
+      <div class="fact"><span>Severity mix</span><strong>5 Critical, 5 High, 4 Medium, 11 Low</strong></div>
+      <div class="fact"><span>Focus incident</span><strong>Incident 4, host win-client-01</strong></div>
+      <div class="fact"><span>Classification</span><strong>True Positive (simulated)</strong></div>
+      <div class="fact"><span>Status</span><strong>Closed: escalated to Tier 2/IR</strong></div>
+    </div>
+
+    <h3>Summary</h3>
+    <p>My <a href="https://github.com/CyberSamliya/soc-alert-triage" target="_blank" rel="noopener">SOC Alert Triage Tool</a> grouped 25 synthetic alerts into 10 incidents by source IP within a 30-minute window. I then manually investigated Incident 4, where a brute-force login was followed two minutes later by an encoded PowerShell command, and escalated it.</p>
+
+    <h3>Incident 4 timeline (UTC, 2026-09-20)</h3>
+    <ul>
+      <li><code>02:14:03</code> to <code>02:14:20</code>: four failed SSH authentications from <code>185.220.101[.]34</code></li>
+      <li><code>02:14:31</code>: multiple failures followed by a success (rule level 10)</li>
+      <li><code>02:16:02</code>: <code>powershell.exe -enc ...</code> on win-client-01 (rule level 12)</li>
+    </ul>
+
+    <h3>Investigation</h3>
+    <p>I decoded the base64 payload in CyberChef with From Base64 then Decode Text (UTF-16LE), matching how PowerShell's <code>-EncodedCommand</code> encodes scripts. It revealed <code>IEX (New-Object Net.WebClient).DownloadString(...)</code>, a fileless download cradle that runs a remote script in memory.</p>
+    <p>The download URL pointed to the same IP that had just brute-forced the host. That link between the two events is what moved this from "suspicious" to "escalate".</p>
+
+    <h3>Indicators of compromise (synthetic, defanged)</h3>
+    <ul>
+      <li>IP: <code>185.220.101[.]34</code></li>
+      <li>URL: <code>hxxp://185.220.101[.]34:8080/update.ps1</code></li>
+      <li>Host: <code>win-client-01</code></li>
+    </ul>
+
+    <h3>MITRE ATT&amp;CK (evidence-supported only)</h3>
+    <div class="index">
+      <table>
+        <thead><tr><th>Tactic</th><th>Technique</th><th>Evidence</th><th>Confidence</th></tr></thead>
+        <tbody>
+          <tr><td>Credential Access</td><td>T1110 Brute Force</td><td>Four failed logins then a success from one IP within 28 seconds</td><td class="label">LIKELY</td></tr>
+          <tr><td>Execution</td><td>T1059.001 PowerShell</td><td>Encoded PowerShell command with an IEX download cradle</td><td class="label">CONFIRMED</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Classification and response</h3>
+    <p>True Positive within the simulated scenario. Recommended escalation to Tier 2/IR, plus a check of outbound firewall or proxy logs for connections from win-client-01 to the attacker IP after 02:16:02 to confirm whether the payload ran.</p>
+
+    <h3>Lessons learned</h3>
+    <p>Automated correlation found the pattern, but the manual decode proved the alert mattered. I scoped version 1 to source-IP correlation only and documented that limitation rather than over-building.</p>
+    <p><a href="https://github.com/CyberSamliya/soc-alert-triage/blob/main/triage_report.md" target="_blank" rel="noopener">Full automated report</a> &middot; <a href="https://github.com/CyberSamliya/soc-alert-triage/blob/main/analyst_notes.md" target="_blank" rel="noopener">Analyst notes</a></p>
+  </article>
+</main>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <h3>Samra Ayele</h3>
+      <p style="color:#cfe8e4;">Operational Excellence leader turned cybersecurity professional. This case log is part of my living portfolio and grows with each new triage.</p>
+      <a href="index.html#case-studies">&larr; Return to project case studies</a>
+    </div>
+    <div>
+      <h4>Related</h4>
+      <p style="color:#cfe8e4; font-size:.86rem;"><a href="https://github.com/CyberSamliya/soc-alert-triage" target="_blank" rel="noopener">SOC Alert Triage Tool on GitHub</a><br><a href="commands.html">Command Reference</a></p>
+    </div>
+  </div>
+  <div class="footer-bottom"><span>&copy; <span id="year">2026</span> Samra Ayele. Lab and training work; not professional SOC employment.</span></div>
+</footer>
+
+<script>
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+navToggle.addEventListener('click', () => {
+  const isOpen = navLinks.classList.toggle('open');
+  navToggle.setAttribute('aria-expanded', isOpen);
+});
+const header = document.getElementById('siteHeader');
+window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 8));
+document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
