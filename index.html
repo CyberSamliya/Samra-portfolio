@@ -216,6 +216,9 @@
   @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
   .gform-embed{border-radius:12px;overflow:hidden;border:1px solid var(--border, #dbe4ea);}
   .gform-embed iframe{display:block;width:100%;min-height:900px;border:0;}
+
+:root{--teal:#167569;--bg:#f6f5f1;--border:#dedfd9;--text2:#525e68;--radius:16px}
+#home{background:radial-gradient(ellipse at 90% 25%,#dcebe4 0,transparent 55%);padding-top:76px}h1{font-size:clamp(2rem,4vw,3.2rem);max-width:20ch}section{scroll-margin-top:90px}.hero-card{box-shadow:14px 14px 0 #dae4df;border-top:5px solid var(--teal)}.route-card{text-decoration:none;color:var(--text)}.route-card:hover{transform:translateY(-3px)}.nav-links{gap:17px}.nav-links a{font-size:.86rem}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #ad611b;outline-offset:4px}#start-here{padding:42px 0}#start-here h2{margin-bottom:24px}.cs-item.open .cs-body{max-height:none!important}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -226,17 +229,7 @@
     <a href="#home" class="brand">Samra Ayele</a>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">&#9776;</button>
     <ul class="nav-links" id="navLinks">
-      <li><a href="#about">About</a></li>
-      <li><a href="#experience">Experience</a></li>
-      <li><a href="#cybersecurity">Portfolio</a></li>
-      <li><a href="#build-deployment">Home Lab</a></li>
-      <li><a href="commands.html">Command Reference</a></li>
-      <li><a href="#case-studies">Case Studies</a></li>
-      <li><a href="#education">Education</a></li>
-      <li><a href="#skills">Skills</a></li>
-      <li><a href="#resume">Resume</a></li>
-      <li><a href="#request-access" class="nav-cta">Request Access</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="#about">About</a></li><li><a href="#case-studies">Projects</a></li><li><a href="#experience">Experience</a></li><li><a href="#education">Education</a></li><li><a href="workspace.html">Daily Workspace ↗</a></li><li><a href="#request-access" class="nav-cta">Request Resume</a></li><li><a href="#contact">Contact</a></li>
     </ul>
   </nav>
 </header>
@@ -253,7 +246,7 @@
       <p class="lead">I improve complex operations through practical problem solving, clear documentation, and team coaching. At PIP Global Safety, I work on continuous improvement and process change. I earned my cybersecurity degree Summa Cum Laude and am building hands-on security skills through projects and labs.</p>
       <div class="btn-row">
         <a href="#case-studies" class="btn btn-primary">Explore Projects</a>
-        <a href="#resume" class="btn btn-outline">Download My Resume</a>
+        <a href="#resume" class="btn btn-outline">Request My Resume</a>
         <a href="#contact" class="btn btn-outline">Let's Connect &rarr;</a>
       </div>
       <div class="stat-row">
@@ -264,7 +257,7 @@
       </div>
     </div>
     <div class="hero-card">
-      <h3>Featured Skills</h3>
+      <span class="eyebrow">From discipline to detection</span><h3>Practical skills. Clear evidence.</h3>
       <div class="chip-row">
         <span class="chip">Risk Assessment (NIST CSF)</span>
         <span class="chip">ISO/IEC 27001</span>
@@ -279,6 +272,7 @@
   </div>
 </section>
 
+<section id="start-here" class="alt"><div class="container"><span class="eyebrow">Choose your path</span><h2>My work, and the tools behind it.</h2><div class="grid grid-3"><a class="card route-card" href="#case-studies"><span class="eyebrow">01 / For hiring teams</span><h3>Explore the evidence →</h3><p>Project context, my contribution, methods, and results. Professional work and lab practice are labeled.</p></a><a class="card route-card" href="workspace.html"><span class="eyebrow">02 / For everyday use</span><h3>Open daily workspace →</h3><p>Plan priorities, track applications, record learning, and focus on one task at a time.</p></a><a class="card route-card" href="commands.html"><span class="eyebrow">03 / For hands-on learning</span><h3>Use command reference →</h3><p>Keep my searchable technical reference nearby while working through lab exercises.</p></a></div><div class="btn-row"><a href="#cybersecurity">Cybersecurity</a><a href="#operational-excellence">Operational Excellence</a><a href="#build-deployment">Home lab</a><a href="#skills">Skills matrix</a><a href="#awards">Honors</a></div></div></section>
 <!-- ABOUT -->
 <section id="about" class="alt">
   <div class="container">
@@ -592,7 +586,7 @@
       <summary><h3>Request access</h3><span class="portfolio-hint">Recommendation letters &amp; resume — click to open the form</span></summary>
       <p>The four signed recommendation letters and resume downloads (Master, Cybersecurity-focused, and Operational Excellence + Technology). Fill in the form below and it lands straight in my inbox — I typically reply within a day.</p>
       <div class="gform-embed">
-        <iframe src="https://docs.google.com/forms/d/e/1FAIpQLScqMwcPj5UP-1h8YZ0XKs2Q4pUJtMAFTeVANHnxyuGs8Wea0A/viewform?embedded=true" width="100%" height="900" frameborder="0" marginheight="0" marginwidth="0" title="Portfolio Access Request form">Loading…</iframe>
+        <iframe src="https://docs.google.com/forms/d/e/1FAIpQLScqMwcPj5UP-1h8YZ0XKs2Q4pUJtMAFTeVANHnxyuGs8Wea0A/viewform?embedded=true" width="100%" height="900" loading="lazy" frameborder="0" marginheight="0" marginwidth="0" title="Portfolio Access Request form">Loading…</iframe>
       </div>
       <p class="form-note">Form not loading? <a href="https://forms.gle/bZDRitqrV5H97h9K6" target="_blank" rel="noopener">Open it in a new tab →</a></p>
     </details>
@@ -623,7 +617,7 @@
         <input id="cf-org" name="org" type="text">
         <label for="cf-message">Message</label>
         <textarea id="cf-message" name="message" required></textarea>
-        <div class="btn-row"><button type="submit" class="btn btn-teal">Send Message</button></div>
+        <div class="btn-row"><button type="submit" class="btn btn-teal">Prepare Email</button></div>
         <p class="form-note" id="cf-status" role="status">Submitting opens your email app with a prepared message.</p>
       </form>
     </div>
@@ -663,7 +657,7 @@
   </div>
   <div class="container footer-bottom">
     <span>&copy; <span id="year"></span> Samra Ayele. All content sanitized to protect employer confidentiality.</span>
-    <span>Built as a living portfolio — see maintenance notes for how to update.</span>
+    <span>Portfolio & daily workspace · Updated October 2026</span>
   </div>
 </footer>
 
@@ -680,6 +674,7 @@ document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click
   navToggle.setAttribute('aria-expanded', 'false');
 }));
 
+document.addEventListener('keydown', e => {if(e.key === 'Escape'){navLinks.classList.remove('open');navToggle.setAttribute('aria-expanded','false');}});
 // ---- Sticky header shadow ----
 const header = document.getElementById('siteHeader');
 window.addEventListener('scroll', () => {
@@ -832,17 +827,20 @@ caseStudies.forEach((cs, i) => {
     </div>
   `;
   const head = item.querySelector('.cs-head');
+  item.querySelector('.cs-body').hidden = true;
   function toggle(){
     const isOpen = item.classList.toggle('open');
     head.setAttribute('aria-expanded', isOpen);
     const body = item.querySelector('.cs-body');
+    body.hidden = !isOpen;
     body.style.maxHeight = isOpen ? body.scrollHeight + 'px' : '0';
   }
   head.addEventListener('click', toggle);
-  head.addEventListener('keypress', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
+  head.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
   csList.appendChild(item);
 });
 
 </script>
 </body>
 </html>
+
