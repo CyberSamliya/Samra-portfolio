@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cybersecurity Command Reference — Samra Ayele</title>
+<meta name="description" content="A searchable reference of terminal, PowerShell, Kali, Ubuntu, and security-tool commands, each with a copy button and notes on when to use it.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2314213D'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Arial,sans-serif' font-weight='700' fill='%232A9D8F' text-anchor='middle'%3ESA%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --navy:#14213D; --slate:#1A2B4C; --teal:#2A9D8F; --amber:#C97A2B;
+    --bg:#F7F8FA; --card:#FFFFFF; --text:#1F2430; --text2:#5B6472; --border:#E2E5EA;
+    --radius:12px; --maxw:1200px;
+    --code:#0B3D4A; --codebg:#EDF3F2;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  a{color:var(--teal);}
+  h1,h2,h3,h4{color:var(--slate); line-height:1.2; margin:0 0 .5em;}
+  h1{font-size:2.3rem; font-weight:800; letter-spacing:-.02em;}
+  h2{font-size:1.5rem; font-weight:800; letter-spacing:-.01em;}
+  p{margin:0 0 1em; color:var(--text);}
+  .container{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+  .eyebrow{text-transform:uppercase; letter-spacing:.12em; font-size:.75rem; font-weight:700; color:var(--teal); margin-bottom:.5em; display:block;}
+
+  /* NAV (matches index.html) */
+  header.site-header{
+    position:sticky; top:0; z-index:100; background:rgba(247,248,250,.92);
+    backdrop-filter:blur(6px); border-bottom:1px solid var(--border); transition:box-shadow .2s;
+  }
+  header.site-header.scrolled{box-shadow:0 2px 12px rgba(20,33,61,.08);}
+  nav.navbar{display:flex; align-items:center; justify-content:space-between; max-width:var(--maxw); margin:0 auto; padding:14px 24px;}
+  .brand{font-weight:800; color:var(--navy); text-decoration:none; font-size:1.1rem;}
+  .nav-links{display:flex; gap:22px; list-style:none; margin:0; padding:0; align-items:center;}
+  .nav-links a{color:var(--text); text-decoration:none; font-size:.92rem; font-weight:600;}
+  .nav-links a:hover{color:var(--teal);}
+  .nav-links a.current{color:var(--teal);}
+  .nav-cta{background:var(--navy); color:#fff !important; padding:9px 16px; border-radius:8px;}
+  .nav-toggle{display:none; background:none; border:none; font-size:1.6rem; color:var(--navy); cursor:pointer;}
+  @media(max-width:900px){
+    .nav-links{display:none; position:absolute; top:100%; left:0; right:0; background:#fff; flex-direction:column; padding:16px 24px; border-bottom:1px solid var(--border); gap:14px;}
+    .nav-links.open{display:flex;}
+    .nav-toggle{display:block;}
+  }
+
+  /* PAGE HEAD */
+  .page-head{padding:48px 0 8px;}
+  .page-head .lead{font-size:1.1rem; color:var(--text2); max-width:760px;}
+  .back{display:inline-block; font-size:.85rem; font-weight:600; margin-bottom:1.2em;}
+
+  /* TOOLBAR */
+  .toolbar{position:sticky; top:62px; z-index:50; background:var(--bg); padding:12px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--border);}
+  .search{flex:1 1 240px; min-width:0; display:flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 13px;}
+  .search:focus-within{border-color:var(--teal); box-shadow:0 0 0 3px rgba(42,157,143,.18);}
+  .search svg{flex:none; width:16px; height:16px; color:var(--text2);}
+  .search input{border:0; outline:0; background:transparent; color:var(--text); font-family:inherit; font-size:.95rem; width:100%; min-width:0;}
+  .count{color:var(--text2); font-size:.82rem; white-space:nowrap;}
+
+  /* WARNING */
+  .note{margin:18px 0 6px; background:#FBF1E5; border:1px solid #EAC9A0; color:#7A4E18; border-radius:10px; padding:11px 15px; font-size:.84rem;}
+  .note strong{font-weight:700;}
+  .note code{font-family:var(--mono); font-size:.82em;}
+
+  /* JUMP CHIPS */
+  nav.jump{display:flex; flex-wrap:wrap; gap:7px; margin-top:16px;}
+  nav.jump a{font-size:.78rem; color:var(--slate); text-decoration:none; background:var(--card); border:1px solid var(--border); padding:5px 12px; border-radius:20px; font-weight:600;}
+  nav.jump a:hover{background:#EDF3F2; border-color:var(--teal); color:var(--teal);}
+
+  /* GROUPS */
+  section.group{margin-top:30px; scroll-margin-top:120px;}
+  section.group>h2{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:3px;}
+  section.group>h2 .tag{font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--teal); background:#E4F4F1; border:1px solid var(--teal); padding:2px 8px; border-radius:5px;}
+  section.group>p.ctx{margin:0 0 12px; color:var(--text2); font-size:.9rem; max-width:760px;}
+  h3.subhead{font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text2); margin:18px 0 8px; font-weight:700;}
+
+  ul.cmds{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  li.cmd{
+    display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1.1fr) auto; gap:12px; align-items:center;
+    background:var(--card); border:1px solid var(--border); border-left:4px solid var(--teal);
+    border-radius:var(--radius); padding:11px 12px 11px 14px; transition:box-shadow .2s;
+  }
+  li.cmd:hover{box-shadow:0 8px 20px rgba(20,33,61,.07);}
+  li.cmd .code{font-family:var(--mono); font-size:.82rem; color:var(--code); background:var(--codebg); padding:3px 7px; border-radius:6px; word-break:break-word; line-height:1.5; min-width:0; justify-self:start;}
+  li.cmd .meaning{font-size:.86rem; min-width:0;}
+  li.cmd .meaning .when{display:block; color:var(--text2); font-size:.78rem; margin-top:1px;}
+  button.copy{flex:none; display:inline-flex; align-items:center; gap:5px; font-family:inherit; font-size:.75rem; font-weight:700; color:var(--navy); background:transparent; border:1.5px solid var(--border); border-radius:8px; padding:6px 11px; cursor:pointer; white-space:nowrap; transition:color .15s,border-color .15s,background .15s;}
+  button.copy:hover{background:var(--navy); color:#fff; border-color:var(--navy);}
+  button.copy.done{color:#fff; background:var(--teal); border-color:var(--teal);}
+  button.copy svg{width:13px; height:13px;}
+  .gui{color:var(--text2); font-style:italic;}
+
+  .empty{display:none; text-align:center; color:var(--text2); padding:44px 0;}
+  .empty.show{display:block;}
+
+  /* FOOTER (matches index.html) */
+  footer{background:var(--navy); color:#fff; padding:48px 0 24px; margin-top:44px;}
+  footer a{color:#cfe8e4; text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+  .footer-grid{display:grid; grid-template-columns:1.6fr 1fr; gap:32px; max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+  @media(max-width:800px){.footer-grid{grid-template-columns:1fr;}}
+  .footer-grid h3{color:#fff;}
+  .footer-grid h4{color:#fff; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.8em;}
+  .footer-grid ul{list-style:none; padding:0; margin:0;}
+  .footer-grid li{margin-bottom:.5em; font-size:.9rem;}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,.15); margin-top:32px; padding-top:18px; font-size:.8rem; color:#B9C4D6; max-width:var(--maxw); margin-left:auto; margin-right:auto; padding-left:24px; padding-right:24px;}
+
+  @media(max-width:620px){
+    li.cmd{grid-template-columns:1fr auto;}
+    li.cmd .meaning{grid-column:1 / -1;}
+    .toolbar{top:60px;}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <nav class="navbar" aria-label="Primary">
+    <a href="index.html#home" class="brand">Samra Ayele</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">&#9776;</button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html#about">About</a></li>
+      <li><a href="index.html#experience">Experience</a></li>
+      <li><a href="index.html#cybersecurity">Portfolio</a></li>
+      <li><a href="index.html#build-deployment">Home Lab</a></li>
+      <li><a href="commands.html" class="current" aria-current="page">Command Reference</a></li>
+      <li><a href="index.html#skills">Skills</a></li>
+      <li><a href="index.html#request-access" class="nav-cta">Request Access</a></li>
+      <li><a href="index.html#contact">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+<div class="container">
+  <div class="page-head">
+    <a href="index.html#cybersecurity" class="back">&larr; Back to portfolio</a>
+    <span class="eyebrow">Reference Tool</span>
+    <h1>Cybersecurity Command Reference</h1>
+    <p class="lead">A working reference I keep for the tools I use across the SOC home lab and coursework. Search to find a command, then copy it straight into your terminal. Every entry notes what it does and when to reach for it.</p>
+  </div>
+
+  <div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Search commands, e.g. nmap, port, hash, firewall" autocomplete="off" aria-label="Search commands">
+    </label>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="note">
+    <strong>Authorized use only.</strong> Scanning, password, and exploit tools are legal only on systems you own or have written permission to test: home-lab VMs, TryHackMe, Hack The Box, Metasploitable, DVWA. Placeholders: <code>&lt;target&gt;</code> = IP or host, <code>&lt;file&gt;</code> = path, <code>&lt;user&gt;</code> = username.
+  </div>
+
+  <nav class="jump" id="jump"></nav>
+
+  <div id="list"></div>
+  <div class="empty" id="empty">No commands match that search.</div>
+</div>
+</main>
+
+<footer>
+  <div class="footer-grid">
+    <div>
+      <h3>Samra Ayele</h3>
+      <p style="color:#cfe8e4;">Operational Excellence leader turned cybersecurity professional. This reference is part of my living portfolio.</p>
+      <a href="index.html#home">&larr; Return to the main site</a>
+    </div>
+    <div>
+      <h4>Using these commands</h4>
+      <p style="color:#cfe8e4; font-size:.86rem;">Built-in help beats any cheat sheet: <code style="font-family:var(--mono);">man &lt;command&gt;</code> or <code style="font-family:var(--mono);">&lt;command&gt; --help</code> on Linux, and <code style="font-family:var(--mono);">Get-Help &lt;cmdlet&gt; -Examples</code> in PowerShell.</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; <span id="year"></span> Samra Ayele. Compiled for lab and study use.</span>
+  </div>
+</footer>
+
+<script>
+const DATA = [
+  { id:"linux", title:"Linux terminal essentials", tag:"Ubuntu + Kali",
+    ctx:"Shared by both distros. The navigation, file, user, process, and network layer you use before any security tool.",
+    subs:[
+      { h:"Navigation & files", rows:[
+        ["pwd","Print working directory","Confirm location before anything destructive"],
+        ["ls -la","List all files incl. hidden, long form","Spot hidden config and dotfiles in recon"],
+        ["cd <dir>","Change directory (.. up, ~ home)","Move around the filesystem"],
+        ["find / -name <file> 2>/dev/null","Search whole system, hide errors","Locate configs, SUID binaries, flags"],
+        ["grep -rin <text> <dir>","Recursive case-insensitive search with line numbers","Hunt passwords or keywords in code and logs"],
+        ["tail -f <file>","Follow a file as it grows","Watch a log update in real time"],
+        ["chmod +x <file>","Make a file executable","Before running a script or exploit"],
+        ["chmod 600 <file>","Owner read/write only","Lock down an SSH key or secret"],
+      ]},
+      { h:"Users, permissions & processes", rows:[
+        ["whoami","Show current user","Confirm who you are after a shell"],
+        ["id","Show UID, GID and groups","Check privilege level"],
+        ["sudo <command>","Run one command as root","Any admin action"],
+        ["su - <user>","Switch to another user","Pivot after finding credentials"],
+        ["ps aux","All processes with owners","See what runs and who owns it"],
+        ["htop","Live process and resource monitor","Find a CPU hog or suspicious process"],
+        ["kill -9 <PID>","Force-kill a process by ID","Stop a hung or malicious process"],
+        ["history","Your past shell commands","Review what was run"],
+      ]},
+      { h:"Networking & transfer", rows:[
+        ["ip a","Show interfaces and IP addresses","Know your own address on a new box"],
+        ["ip r","Show the routing table","Find the gateway and reachable networks"],
+        ["ping -c 4 <target>","Send 4 ICMP echoes","Quick is-it-alive check"],
+        ["ss -tulpn","Listening TCP/UDP ports with process","Local service enumeration"],
+        ["curl -I <url>","Fetch HTTP headers only","Identify a web server and tech fast"],
+        ["wget <url>","Download a file","Pull a tool or payload onto the box"],
+        ["scp <file> <user>@<host>:<path>","Copy over SSH","Move files securely between machines"],
+        ["ssh <user>@<host>","Remote shell over SSH","Log into a server or pivot"],
+      ]},
+    ]},
+  { id:"ubuntu", title:"Ubuntu hardening & monitoring", tag:"Blue team",
+    ctx:"Defender-side commands for locking down and watching a server.",
+    subs:[
+      { h:"Firewall (UFW)", rows:[
+        ["sudo ufw default deny incoming","Block all inbound by default","Baseline for any server"],
+        ["sudo ufw allow 443/tcp","Open a port","Permit a service you run"],
+        ["sudo ufw limit 22/tcp","Allow SSH but rate-limit","Slow down SSH brute-force"],
+        ["sudo ufw enable","Turn the firewall on","After rules are set (ships disabled)"],
+        ["sudo ufw status verbose","Show active rules and defaults","Verify what is allowed"],
+      ]},
+      { h:"Updates, logs & audit", rows:[
+        ["sudo apt update && sudo apt upgrade -y","Refresh and install updates","Patch before configuring"],
+        ["journalctl -u ssh -f","Follow a service's logs live","Watch SSH auth attempts"],
+        ["journalctl -p err -b","Errors since last boot","Triage what is failing"],
+        ["sudo tail -f /var/log/auth.log","Follow the authentication log","Catch failed logins and sudo use"],
+        ["sudo systemctl disable --now <svc>","Stop and disable a service","Shut off an unneeded listener"],
+        ["sudo fail2ban-client status sshd","Show banned IPs for the SSH jail","See who got blocked"],
+        ["sudo lynis audit system","Run a full security audit","Periodic hardening score with fixes"],
+      ]},
+    ]},
+  { id:"kali", title:"Kali Linux specifics", tag:"Offense setup",
+    ctx:"Kali is a rolling release; a box updated this week has current packages.",
+    subs:[
+      { h:null, rows:[
+        ["sudo apt update && sudo apt full-upgrade -y","Update Kali properly","Correct way to update a rolling release"],
+        ["sudo systemctl start postgresql","Start PostgreSQL","Needed before the Metasploit database works"],
+        ["msfdb init","Initialize the Metasploit database","One-time: searches and workspaces persist"],
+        ["locate rockyou.txt","Find a tool or wordlist fast","Find the common wordlist"],
+        ["gzip -d /usr/share/wordlists/rockyou.txt.gz","Unzip the rockyou wordlist","One-time prep before cracking"],
+      ]},
+    ]},
+  { id:"powershell", title:"PowerShell for security & IR", tag:"Open as Admin",
+    ctx:"Verb-Noun pattern. Defender commands for triaging a Windows host.",
+    subs:[
+      { h:"Discovery", rows:[
+        ["Get-Help <cmdlet> -Examples","Show usage examples for a cmdlet","Learn any command you do not know"],
+        ["Get-Process","List running processes","First look at what is executing"],
+        ["Get-Service | Where-Object Status -eq 'Running'","Running services only","Spot a service that should not be there"],
+        ["Get-LocalUser","List local user accounts","Check for rogue accounts"],
+        ["Get-LocalGroupMember Administrators","Members of the Administrators group","Catch privilege escalation"],
+      ]},
+      { h:"Persistence & network", rows:[
+        ["Get-CimInstance Win32_StartupCommand","Programs set to run at startup","Hunt autostart persistence"],
+        ["Get-ScheduledTask | Where State -eq 'Ready'","Active scheduled tasks","Common persistence to review"],
+        ["Get-NetTCPConnection -State Established","Active TCP connections","Find a live C2 connection"],
+        ["Resolve-DnsName <host>","DNS lookup","Check where a domain resolves"],
+        ["Test-NetConnection <host> -Port 443","Test host and port reachability","Confirm connectivity in triage"],
+      ]},
+      { h:"Logs & files", rows:[
+        ["Get-WinEvent -LogName Security -MaxEvents 50","Recent Security log events","Review logons and privilege use"],
+        ["Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625}","Filter for failed logons (event 4625)","Detect brute-force attempts"],
+        ["Get-FileHash <file> -Algorithm SHA256","Compute a file hash","Check against threat intel"],
+        ["Select-String -Path <file> -Pattern 'password'","Grep-style text search","Find keywords across files"],
+      ]},
+    ]},
+  { id:"cmd", title:"Windows CMD essentials", tag:"Classic shell",
+    ctx:"Older than PowerShell but fast for quick checks. Run admin ones elevated.",
+    subs:[
+      { h:null, rows:[
+        ["ipconfig /all","Full network configuration","Get IP, MAC, DNS, DHCP"],
+        ["netstat -ano","Connections and ports with PIDs","Map a port to a process ID"],
+        ["tasklist /svc","Processes with their services","Which service under which process"],
+        ["taskkill /PID <pid> /F","Force-kill a process","Stop a malicious or hung process"],
+        ["net user","List local users","Spot unexpected accounts"],
+        ["net localgroup administrators","Who is a local admin","Audit privilege"],
+        ["schtasks","List scheduled tasks","Review autostart persistence"],
+        ["wmic process get name,processid,parentprocessid","Processes with parent IDs","Trace a process to its launcher"],
+        ["nslookup <host>","DNS lookup","Resolve or verify a domain"],
+        ["sfc /scannow","Verify and repair system files","Check integrity after compromise"],
+      ]},
+    ]},
+  { id:"recon", title:"Recon & network tools", tag:"Nmap + more",
+    ctx:"The reconnaissance core. Learn nmap first. Authorized targets only.",
+    subs:[
+      { h:"Nmap", rows:[
+        ["nmap <target>","Default scan of 1000 common TCP ports","Quick first look at one host"],
+        ["nmap -sn 192.168.1.0/24","Ping sweep, no port scan","Discover live hosts on a subnet"],
+        ["nmap -sS <target>","SYN stealth scan (needs root)","Default fast half-open scan"],
+        ["nmap -sV <target>","Detect service versions","Find exact software and version"],
+        ["nmap -sC <target>","Run the default safe scripts","Pull banners and catch misconfigs"],
+        ["nmap -A <target>","OS, version, scripts, traceroute","Thorough single-host profile"],
+        ["nmap -p- <target>","Scan all 65535 ports","Make sure no high port is missed"],
+        ["nmap -sU <target>","UDP scan","Find DNS, SNMP, DHCP services"],
+        ["nmap --script vuln <target>","Run vulnerability scripts","Flag known unpatched issues"],
+        ["nmap -sV -sC -T4 -Pn <target>","Common thorough first pass","Solid go-to combination"],
+        ["nmap -oA scan <target>","Save output in all 3 formats","Keep records for a report"],
+      ]},
+      { h:"Netcat, DNS & capture", rows:[
+        ["nc -lvnp 4444","Listen on a port, verbose","Catch a reverse shell or file"],
+        ["nc <target> 80","Connect to a port","Manually probe or banner-grab"],
+        ["dig <domain> ANY","Full DNS records for a domain","Map a target's DNS footprint"],
+        ["dig axfr @<ns> <domain>","Attempt a zone transfer","Test a misconfigured DNS server"],
+        ["whois <domain>","Registration and ownership data","Early passive recon"],
+        ["tcpdump -i eth0 -w cap.pcap","Capture packets to a file","Record traffic for analysis"],
+        ["tshark -r cap.pcap -Y 'http.request'","Filter a capture (Wireshark CLI)","Pull packets from a saved capture"],
+        ["gobuster dir -u <url> -w <wordlist>","Brute-force web directories","Find hidden paths and files"],
+        ["enum4linux-ng <target>","Enumerate SMB / Windows shares","Pull users, shares and info"],
+      ]},
+    ]},
+  { id:"web", title:"Web application testing", tag:"Authorized only",
+    ctx:"Probe web apps only against targets you own or may test (DVWA, Juice Shop).",
+    subs:[
+      { h:null, rows:[
+        ["whatweb <url>","Fingerprint web technologies","Identify CMS, frameworks, servers"],
+        ["nikto -h <url>","Scan a web server for known issues","Fast baseline vulnerability check"],
+        ["gobuster dir -u <url> -w <wordlist> -x php,txt","Brute-force dirs and files by extension","Discover admin panels and backups"],
+        ["ffuf -u <url>/FUZZ -w <wordlist>","Fast fuzzing of paths or parameters","Content and parameter discovery"],
+        ["wpscan --url <url> --enumerate u","Scan WordPress, enumerate users","Assess a WordPress site"],
+        ["sqlmap -u '<url>?id=1' --batch","Test a parameter for SQL injection","Confirm and exploit SQLi, no prompts"],
+        ["sqlmap -u '<url>?id=1' --dbs","List databases if injectable","Enumerate after SQLi is confirmed"],
+      ]},
+    ]},
+  { id:"pass", title:"Password & hash tools", tag:"Cracking",
+    ctx:"For hashes you captured legally and authorized login brute-force.",
+    subs:[
+      { h:null, rows:[
+        ["hydra -l <user> -P <wordlist> <target> ssh","Brute-force an SSH login","Test password strength (authorized)"],
+        ["john --wordlist=<wordlist> hashes.txt","Crack hashes with John the Ripper","Offline cracking from a hash file"],
+        ["john --show hashes.txt","Show already-cracked passwords","Read results after a run"],
+        ["hashcat -m 0 -a 0 hashes.txt <wordlist>","GPU crack MD5, dictionary","Fast cracking, known hash type"],
+        ["hashcat -m 1000 hashes.txt <wordlist>","Crack NTLM hashes (mode 1000)","Common Windows password hashes"],
+        ["hashid <hash>","Identify a hash type","Figure out which -m mode to use"],
+      ]},
+    ]},
+  { id:"msf", title:"Metasploit & exploit search", tag:"Framework",
+    ctx:"Start PostgreSQL first. These run inside the msfconsole prompt unless noted.",
+    subs:[
+      { h:"Inside msfconsole", rows:[
+        ["msfconsole","Launch the framework","Start a Metasploit session"],
+        ["search <term>","Find modules by keyword or CVE","Locate an exploit or scanner"],
+        ["use <module>","Select a module","After finding the one you want"],
+        ["show options","List settings the module needs","See what to configure"],
+        ["set RHOSTS <target>","Set the target host","Point the module at a target"],
+        ["set LHOST <your-ip>","Set your listener address","For reverse shells and payloads"],
+        ["check","Test if target is vulnerable without firing","Confirm before exploiting"],
+        ["exploit","Launch the module","Execute against the target"],
+        ["sessions -i <id>","Interact with a session","Drop into a shell you opened"],
+      ]},
+      { h:"Shell commands", rows:[
+        ["msfvenom -p <payload> LHOST=<ip> LPORT=<port> -f <format>","Build a standalone payload","Create a reverse shell binary or script"],
+        ["searchsploit <term>","Search the local Exploit-DB","Find a public exploit"],
+        ["searchsploit -m <id>","Copy an exploit to your folder","Grab the code to review and use"],
+      ]},
+    ]},
+  { id:"forensics", title:"Forensics & malware triage", tag:"Isolated VM",
+    ctx:"Static analysis. Only detonate real malware inside an isolated VM.",
+    subs:[
+      { h:null, rows:[
+        ["file <file>","Identify a file's real type","Check what a file actually is"],
+        ["strings <file>","Extract readable text from a binary","Find URLs, IPs and clues"],
+        ["sha256sum <file>","Compute a file hash","Compare against known-good or intel"],
+        ["xxd <file> | head","View raw hex and bytes","Inspect headers and magic bytes"],
+        ["binwalk <file>","Find embedded files and firmware","Carve hidden content"],
+        ["exiftool <file>","Read metadata","Pull author, GPS, software from files"],
+        ["foremost -i <image> -o out/","Recover files from a disk image","Carve deleted files"],
+        ["volatility -f <memdump> <plugin>","Analyze a memory dump","Investigate processes in RAM"],
+      ]},
+    ]},
+  { id:"splunk", title:"Splunk SPL & log analysis", tag:"SIEM",
+    ctx:"Splunk uses SPL, piping data through commands with the pipe. Run in the search bar.",
+    subs:[
+      { h:null, rows:[
+        ["index=main error | head 100","First 100 error events","Quick look at a log source"],
+        ["index=main | stats count by src_ip","Count events per source IP","Find the noisiest or suspicious host"],
+        ["sourcetype=wineventlog EventCode=4625","Failed Windows logons","Detect brute-force"],
+        ["index=main | timechart span=1h count","Event volume over time","See spikes that signal an incident"],
+        ["index=main | where count > 50","Keep only high-count results","Threshold-based alerting logic"],
+        ["index=main | table _time, src_ip, dest_ip","Pick columns to display","Build a clean readable result"],
+        ["index=main | dedup src_ip","One row per source IP","Remove duplicate noise"],
+      ]},
+    ]},
+];
+
+const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const okIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const list = document.getElementById('list');
+const jump = document.getElementById('jump');
+
+DATA.forEach(group => {
+  const a = document.createElement('a');
+  a.href = '#' + group.id;
+  a.textContent = group.title;
+  jump.appendChild(a);
+
+  const sec = document.createElement('section');
+  sec.className = 'group';
+  sec.id = group.id;
+  let html = '<h2>' + esc(group.title) + '<span class="tag">' + esc(group.tag) + '</span></h2><p class="ctx">' + esc(group.ctx) + '</p>';
+  group.subs.forEach(sub => {
+    if (sub.h) html += '<h3 class="subhead">' + esc(sub.h) + '</h3>';
+    html += '<ul class="cmds">';
+    sub.rows.forEach(r => {
+      const code = r[0], meaning = r[1], when = r[2];
+      html += '<li class="cmd" data-text="' + esc((code+' '+meaning+' '+when).toLowerCase()) + '">' +
+        '<code class="code">' + esc(code) + '</code>' +
+        '<span class="meaning">' + esc(meaning) + '<span class="when">' + esc(when) + '</span></span>' +
+        '<button class="copy" type="button" data-copy="' + esc(code) + '">' + copyIcon + '<span>Copy</span></button>' +
+        '</li>';
+    });
+    html += '</ul>';
+  });
+  sec.innerHTML = html;
+  list.appendChild(sec);
+});
+
+list.addEventListener('click', e => {
+  const btn = e.target.closest('button.copy');
+  if (!btn) return;
+  const text = btn.getAttribute('data-copy');
+  const done = () => {
+    btn.classList.add('done');
+    btn.innerHTML = okIcon + '<span>Copied</span>';
+    setTimeout(() => { btn.classList.remove('done'); btn.innerHTML = copyIcon + '<span>Copy</span>'; }, 1400);
+  };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (_) {}
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else { fallback(); }
+});
+
+const q = document.getElementById('q');
+const count = document.getElementById('count');
+const empty = document.getElementById('empty');
+const items = [].slice.call(document.querySelectorAll('li.cmd'));
+const total = items.length;
+
+function refresh() {
+  const term = q.value.trim().toLowerCase();
+  let shown = 0;
+  items.forEach(li => {
+    const match = !term || li.getAttribute('data-text').indexOf(term) !== -1;
+    li.hidden = !match;
+    if (match) shown++;
+  });
+  document.querySelectorAll('section.group').forEach(sec => {
+    const anyVisible = [].slice.call(sec.querySelectorAll('li.cmd')).some(li => !li.hidden);
+    sec.hidden = !anyVisible;
+  });
+  empty.classList.toggle('show', shown === 0);
+  count.textContent = term ? shown + ' of ' + total : total + ' commands';
+}
+q.addEventListener('input', refresh);
+refresh();
+
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+navToggle.addEventListener('click', () => {
+  const isOpen = navLinks.classList.toggle('open');
+  navToggle.setAttribute('aria-expanded', isOpen);
+});
+const header = document.getElementById('siteHeader');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 8);
+});
+document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
