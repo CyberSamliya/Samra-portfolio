@@ -153,12 +153,12 @@
       <div class="fact"><span>Trigger</span><strong>Scheduled self-review of an owned site</strong></div>
       <div class="fact"><span>Method</span><strong>Passive, read-only page review</strong></div>
       <div class="fact"><span>Highest severity</span><strong>Medium</strong></div>
-      <div class="fact"><span>Findings</span><strong>1 Medium, 5 Low, 1 Unknown</strong></div>
+      <div class="fact"><span>Findings</span><strong>1 Medium, 6 Low</strong></div>
       <div class="fact"><span>Status</span><strong>Open: remediation in progress</strong></div>
     </div>
 
     <h3>Summary</h3>
-    <p>A passive triage of a community resource site I built and own found no signs of compromise or malicious activity. It did find seven weaknesses: one Medium (privacy policy gaps), five Low, and one untested area (HTTP security headers).</p>
+    <p>A passive triage of a community resource site I built and own found no signs of compromise or malicious activity. It did find seven weaknesses: one Medium (privacy policy gaps) and six Low, including missing HTTP hardening headers.</p>
 
     <h3>Scope and authorization</h3>
     <p>I own and maintain the site. Review was read-only: page fetches only, with no scanning, form submissions, or login attempts. Reviewed pages: homepage, Ohio directory, privacy policy, daily tools, and one empty state page.</p>
@@ -174,7 +174,7 @@
           <tr><td>F4</td><td>Blank date, year, and zero counts shown when JavaScript is off</td><td>Low</td><td class="label">LIKELY</td><td>Add static fallback values</td></tr>
           <tr><td>F5</td><td>Five directory records with weak or conflicting sources</td><td>Low</td><td class="label">CONFIRMED</td><td>Re-verify or downgrade status</td></tr>
           <tr><td>F6</td><td>"Skip to tool" link may target a missing anchor</td><td>Low</td><td class="label">POSSIBLE</td><td>Test in a browser</td></tr>
-          <tr><td>F7</td><td>HTTP security headers not tested; no meta Content-Security-Policy seen</td><td>Info</td><td class="label">UNKNOWN</td><td>Run a header check; add a meta CSP</td></tr>
+          <tr><td>F7</td><td>HSTS present (1 year), but Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, and Permissions-Policy headers are missing</td><td>Low</td><td class="label">CONFIRMED</td><td>Add a meta Content-Security-Policy; other headers need a CDN in front of GitHub Pages</td></tr>
         </tbody>
       </table>
     </div>
@@ -191,7 +191,7 @@
     <h3>Next steps</h3>
     <ol>
       <li>Fix F2 (privacy disclosures) and F1 (preview URL).</li>
-      <li>Run a header check from the lab Kali VM and add a meta Content-Security-Policy.</li>
+      <li>Add a meta Content-Security-Policy (header check completed from the lab Kali VM on 2026-10-09 with <code>curl -sI</code>).</li>
       <li>Fix the remaining Low items, then re-run this triage to verify closure.</li>
     </ol>
 
