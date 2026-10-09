@@ -160,6 +160,19 @@
     <h3>Summary</h3>
     <p>A passive triage of a community resource site I built and own found no signs of compromise or malicious activity. It did find seven weaknesses: one Medium (privacy policy gaps) and six Low, including missing HTTP hardening headers.</p>
 
+    <h3>Case timeline (2026-10-09, Eastern Time)</h3>
+    <div class="index">
+      <table>
+        <thead><tr><th>Time</th><th>Action</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">11:54</td><td>Case opened; passive review of 5 pages</td><td>6 findings logged, headers marked UNKNOWN</td></tr>
+          <tr><td class="mono">12:10</td><td>Case report written and published to this log</td><td>Severity set to Medium (F2)</td></tr>
+          <tr><td class="mono">12:20</td><td>F1 reassessed: same handle already public elsewhere</td><td>F1 lowered from Medium to Low</td></tr>
+          <tr><td class="mono">16:10</td><td><code>curl -sI</code> header check from the lab Kali VM</td><td>F7 confirmed Low: HSTS present, hardening headers missing</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <h3>Scope and authorization</h3>
     <p>I own and maintain the site. Review was read-only: page fetches only, with no scanning, form submissions, or login attempts. Reviewed pages: homepage, Ohio directory, privacy policy, daily tools, and one empty state page.</p>
 
@@ -175,6 +188,23 @@
           <tr><td>F5</td><td>Five directory records with weak or conflicting sources</td><td>Low</td><td class="label">CONFIRMED</td><td>Re-verify or downgrade status</td></tr>
           <tr><td>F6</td><td>"Skip to tool" link may target a missing anchor</td><td>Low</td><td class="label">POSSIBLE</td><td>Test in a browser</td></tr>
           <tr><td>F7</td><td>HSTS present (1 year), but Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, and Permissions-Policy headers are missing</td><td>Low</td><td class="label">CONFIRMED</td><td>Add a meta Content-Security-Policy; other headers need a CDN in front of GitHub Pages</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>HTTP header check (F7 evidence)</h3>
+    <p>Command: <code>curl -sI https://cybersamliya.github.io/habesha-hub/</code>, run from the Kali VM. Response: <code>HTTP/2 200</code>, served by GitHub Pages through a Fastly/Varnish cache.</p>
+    <div class="index">
+      <table>
+        <thead><tr><th>Header</th><th>Result</th><th>Why it matters</th><th>Fixable on GitHub Pages?</th></tr></thead>
+        <tbody>
+          <tr><td>Strict-Transport-Security</td><td>Present, max-age=31556952 (1 year)</td><td>Forces HTTPS</td><td>Already set by GitHub</td></tr>
+          <tr><td>Content-Security-Policy</td><td>Missing</td><td>Limits where scripts load from</td><td>Yes, as a meta tag</td></tr>
+          <tr><td>Referrer-Policy</td><td>Missing as header; set by meta tag</td><td>Limits URL data sent to linked sites</td><td>Already covered</td></tr>
+          <tr><td>X-Frame-Options</td><td>Missing</td><td>Blocks clickjacking</td><td>No (header only); low impact, no logins</td></tr>
+          <tr><td>X-Content-Type-Options</td><td>Missing</td><td>Stops file-type guessing</td><td>No (header only)</td></tr>
+          <tr><td>Permissions-Policy</td><td>Missing</td><td>Disables camera, mic, location APIs</td><td>No (header only); site does not use them</td></tr>
+          <tr><td>Access-Control-Allow-Origin: *</td><td>Present</td><td>Any site can read the pages</td><td>Acceptable for public static content</td></tr>
         </tbody>
       </table>
     </div>
