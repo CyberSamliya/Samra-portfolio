@@ -1,7 +1,8 @@
 # Jobs workspace handoff
 
 Branch: `feature/owner-jobs-workspace`. This is a review build, with no production
-deployment or merge. GitHub Pages serves the public site; Supabase supplies Auth,
+deployment or merge. The existing public site uses GitHub Pages; the review build
+can use [Netlify](netlify.md). Supabase supplies Auth,
 Postgres and private Storage. No infrastructure is provisioned automatically.
 
 ## Baseline
@@ -55,8 +56,8 @@ external job-board pages and Teal were not live-account validated here.
    these conditions; they do not prove the hosted project is configured correctly.
 8. Review the staging build and request explicit approval before production
    deployment or merge. Deploy `_site` only. The supplied GitHub workflow creates
-   a review artifact and never deploys to Pages. No staging hosting integration
-   existed in the baseline, so a hosted preview was not created automatically.
+   a review artifact and never deploys to Pages. Netlify build configuration is
+   included; a hosted preview requires connecting a Netlify site.
 
 Auth tokens are held in memory, not localStorage. A page refresh requires
 sign-in and MFA again. Sign-out clears private UI state. Use Supabase's private

@@ -25,3 +25,11 @@ The review workflow uploads `_site` as an artifact and does not deploy it.
 
 Existing Daily Workspace backups retain legacy job entries. That workspace no
 longer offers public job-search actions. No automatic upload of legacy data occurs.
+
+## Netlify hosting
+
+Import this repository in Netlify and select `feature/owner-jobs-workspace` for
+a staging site. `netlify.toml` sets Node 24, `npm run build:site`, and `_site` as
+the publish directory. The Jobs route is `/admin/jobs/`; public pages and PDFs
+keep their relative links. Netlify hosts the frontend; Supabase remains the
+private backend. See [Netlify setup](docs/netlify.md) before connecting real data.
