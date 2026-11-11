@@ -1,0 +1,8 @@
+project_id = "samra-jobs"
+[auth]
+enable_signup = false
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+[functions.job-alert-import]
+verify_jwt = true

@@ -1,0 +1,9 @@
+node_modules/
+admin/jobs/dist/
+test-results/
+playwright-report/
+.env*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+_site/

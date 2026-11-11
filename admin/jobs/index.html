@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; frame-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <title>Jobs · Samra Ayele Admin</title>
+    <link rel="stylesheet" href="./jobs.css" />
+    <script src="./config.js" defer></script>
+    <script type="module" src="./dist/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to Jobs</a>
+    <header>
+      <a class="brand" href="../../index.html">SA <span>Samra Ayele</span></a>
+      <div class="header-right">
+        <span class="private">Owner workspace</span
+        ><button id="signout" class="quiet" hidden>Sign out</button
+        ><a href="../../index.html">Portfolio ↗</a>
+      </div>
+    </header>
+    <div class="shell">
+      <aside>
+        <a class="admin-home" href="./index.html">Admin <span>/ Jobs</span></a>
+        <p class="eyebrow">CAREER WORKSPACE</p>
+        <nav aria-label="Jobs views" id="views">
+          <a href="#find" data-view="find">⌕ <span>Find Jobs</span></a
+          ><a href="#alerts" data-view="alerts"
+            >◉ <span>Alerts</span
+            ><span class="count" id="alert-count">—</span></a
+          ><a href="#applications" data-view="applications"
+            >▤ <span>Applications</span></a
+          ><a href="#documents" data-view="documents"
+            >▧ <span>Documents</span></a
+          >
+        </nav>
+        <div class="sidebar-note">
+          <span class="dot"></span> Your next chapter.
+          <p>A little structure.<br />A thoughtful next step.</p>
+        </div>
+        <a class="back" href="../../workspace.html">← Daily workspace</a>
+      </aside>
+      <main id="main" tabindex="-1">
+        <div id="notice" role="status" aria-live="polite"></div>
+        <section id="gate">
+          <p class="eyebrow">ADMIN / JOBS</p>
+          <h1>Your next chapter,<br />in one place.</h1>
+          <p class="lead">
+            Discover opportunities. Prepare with intention.<br />Keep every
+            application moving.
+          </p>
+          <div class="card signin">
+            <span class="pill">Private · Samra only</span>
+            <h2>Sign in to your workspace</h2>
+            <p>Use your owner account, then verify with your authenticator.</p>
+            <p id="setup-message" class="muted"></p>
+            <form id="signin-form">
+              <label
+                >Email<input
+                  name="email"
+                  type="email"
+                  autocomplete="username"
+                  required /></label
+              ><label
+                >Password<input
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required /></label
+              ><button type="submit">Continue →</button>
+            </form>
+            <form id="mfa-form" hidden>
+              <p id="mfa-instructions"></p>
+              <img
+                id="mfa-qr"
+                alt="Authenticator enrollment QR code"
+                hidden
+              /><label
+                >Authenticator code<input
+                  name="code"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxlength="6"
+                  required /></label
+              ><button>Verify & open Jobs</button>
+            </form>
+          </div>
+          <p class="fine">
+            Application records and documents are available only after owner
+            verification and MFA.
+          </p>
+        </section>
+        <div id="workspace" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ADMIN / JOBS</p>
+              <h1 id="view-title">Find Jobs</h1>
+              <p class="muted" id="view-subtitle">
+                Make your next move a thoughtful one.
+              </p>
+            </div>
+            <div class="date" id="today"></div>
+          </div>
+          <div class="stats" id="stats"></div>
+          <div id="content"></div>
+        </div>
+        <noscript
+          >JavaScript is required for private sign-in. The public portfolio
+          remains available.</noscript
+        >
+      </main>
+    </div>
+    <dialog id="editor">
+      <div class="dialog-head">
+        <h2 id="dialog-title">Application</h2>
+        <button id="close-dialog" class="quiet" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+      <p id="dialog-notice" role="status" aria-live="polite"></p>
+      <div id="dialog-content"></div>
+    </dialog>
+  </body>
+</html>

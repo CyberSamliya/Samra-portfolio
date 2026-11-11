@@ -1,0 +1,26 @@
+name: Jobs review build
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:site
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: CHROMIUM_PATH=$(node -e "process.stdout.write(require('playwright').chromium.executablePath())") npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jobs-review-static-site
+          path: _site/
+          retention-days: 7
+# Review artifact only. No production or Pages deployment, permissions, or merge action.
