@@ -1,7 +1,10 @@
 // Synthetic Supabase HTTP fixture. Real authorization is tested separately against Postgres RLS.
 export const OWNER = "11111111-1111-4111-8111-111111111111";
 export const OTHER = "22222222-2222-4222-8222-222222222222";
-export async function backend(page, { owner = true, mfa = true } = {}) {
+export async function backend(
+  page,
+  { owner = true, mfa = true, enrolled = true, pending = false } = {},
+) {
   const records = {
     applications: [],
     profiles: [
@@ -35,14 +38,17 @@ export async function backend(page, { owner = true, mfa = true } = {}) {
     created_at: new Date().toISOString(),
     app_metadata: {},
     user_metadata: {},
-    factors: [
-      {
-        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-        factor_type: "totp",
-        status: "verified",
-        friendly_name: "Jobs",
-      },
-    ],
+    factors:
+      enrolled || pending
+        ? [
+            {
+              id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              factor_type: "totp",
+              status: enrolled ? "verified" : "unverified",
+              friendly_name: "Jobs",
+            },
+          ]
+        : [],
   });
   const encode = (s) => Buffer.from(s).toString("base64url");
   const jwt = () =>
@@ -67,7 +73,8 @@ export async function backend(page, { owner = true, mfa = true } = {}) {
     token_type: "bearer",
     user: user(),
   });
-  let downloads = 0;
+  let downloads = 0,
+    removedFactors = 0;
   await page.route("**/admin/jobs/config.js", (r) =>
     r.fulfill({
       contentType: "application/javascript",
@@ -92,6 +99,23 @@ export async function backend(page, { owner = true, mfa = true } = {}) {
     if (method === "OPTIONS") return send({});
     if (url.pathname.includes("/auth/v1/token")) return send(session());
     if (url.pathname === "/auth/v1/user") return send(user());
+    if (method === "DELETE" && url.pathname.includes("/auth/v1/factors/")) {
+      pending = false;
+      removedFactors++;
+      return send({ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" });
+    }
+    if (method === "POST" && url.pathname === "/auth/v1/factors") {
+      pending = true;
+      return send({
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        type: "totp",
+        totp: {
+          qr_code:
+            '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100"/></svg>',
+          secret: "SYNTHETIC",
+        },
+      });
+    }
     if (url.pathname.endsWith("/challenge"))
       return send({
         id: "challenge-id",
@@ -100,6 +124,8 @@ export async function backend(page, { owner = true, mfa = true } = {}) {
     if (url.pathname.endsWith("/verify")) {
       if (!mfa) return send({ message: "Invalid code" }, 400);
       level = "aal2";
+      enrolled = true;
+      pending = false;
       return send(session());
     }
     if (url.pathname.endsWith("/logout")) return send({});
@@ -206,7 +232,11 @@ export async function backend(page, { owner = true, mfa = true } = {}) {
     }
     return send({ message: "Unexpected operation" }, 400);
   });
-  return { records, downloads: () => downloads };
+  return {
+    records,
+    downloads: () => downloads,
+    removedFactors: () => removedFactors,
+  };
 }
 export async function login(page) {
   await page.goto("/Samra-portfolio/admin/jobs/index.html");

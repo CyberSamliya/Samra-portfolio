@@ -298,3 +298,24 @@ test("CSV preview skips exact duplicates, flags similar roles, supports private 
     "Verified Python coursework",
   );
 });
+
+test("first-time MFA enrollment cleans up an unfinished factor and remains gated until verification", async ({
+  page,
+}) => {
+  const fixture = await backend(page, { enrolled: false, pending: true });
+  await page.goto(ROOT + "/admin/jobs/index.html");
+  await page.getByLabel("Email", { exact: true }).fill("owner@example.test");
+  await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
+  await page.getByRole("button", { name: "Continue →", exact: true }).click();
+  await expect(
+    page.getByAltText("Authenticator enrollment QR code"),
+  ).toBeVisible();
+  await expect(page.locator("#workspace")).toBeHidden();
+  expect(fixture.removedFactors()).toBe(1);
+  await page.getByLabel("Authenticator code").fill("123456");
+  await page.getByRole("button", { name: "Verify & open Jobs" }).click();
+  await expect(page.locator("#workspace")).toBeVisible();
+  await expect(
+    page.getByAltText("Authenticator enrollment QR code"),
+  ).toBeHidden();
+});

@@ -205,7 +205,7 @@ Official references inspected during implementation (2026-11-11):
 - Reachable official source: `supabase/supabase`, `apps/docs/content/guides/` on GitHub.
 - [Google Gmail discovery definition](https://github.com/googleapis/google-api-nodejs-client/blob/main/discovery/gmail-v1.json), including full messages, profile and read-only scopes.
 
-Local validation result: **16 Node/Postgres/importer tests passed; 5 Chromium
+Local validation result: **16 Node/Postgres/importer tests passed; 6 Chromium
 scenarios passed**. The browser fixture uses synthetic Auth tokens and API
 responses. The importer is exercised against synthetic Gmail responses, including
 wrong-account rejection, disconnect, attachment skipping and retry deduplication.

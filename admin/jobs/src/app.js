@@ -1435,14 +1435,16 @@ async function startMFA() {
     await unlock();
     return;
   }
-  const { totp } = await api.unwrap(api.client.auth.mfa.listFactors());
+  const { all, totp } = await api.unwrap(api.client.auth.mfa.listFactors());
   const verified = totp.find((f) => f.status === "verified");
   if (verified) {
     factorId = verified.id;
     $("mfa-instructions").textContent =
       "Enter the current code from your authenticator.";
   } else {
-    const pending = totp.find((f) => f.status === "unverified");
+    const pending = all.find(
+      (f) => f.factor_type === "totp" && f.status === "unverified",
+    );
     if (pending)
       await api.unwrap(api.client.auth.mfa.unenroll({ factorId: pending.id }));
     const enrollment = await api.unwrap(
