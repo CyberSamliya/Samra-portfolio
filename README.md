@@ -1,9 +1,10 @@
 # Samra Ayele portfolio and Jobs workspace
 
-Jobs now works **without an account or backend** at `admin/jobs/index.html`.
-It stores applications, profiles, alert leads and document files in IndexedDB
-on the current browser/device. Anyone using that browser profile can access it.
-There is no authentication, encryption guarantee or cloud sync.
+Jobs now uses a **password-encrypted local vault without a cloud account or backend** at `admin/jobs/index.html`.
+It encrypts applications, profiles, alert leads and document files in IndexedDB
+on the current browser/device. Create a vault password on first use and unlock
+it on later visits. There is no server identity or cloud sync. Keep the password
+and encrypted backups safe; there is no password reset service.
 
 ```sh
 npm ci

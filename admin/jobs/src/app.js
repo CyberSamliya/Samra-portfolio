@@ -1,3 +1,9 @@
+import {
+  inspectVault,
+  setupVault,
+  unlockVault,
+  decryptBackup,
+} from "./vault.js";
 import { createLocalAPI, validateBackup } from "./local-api.js";
 import {
   STATUSES,
@@ -73,6 +79,10 @@ const localDateTime = () =>
     .slice(0, 16);
 let api,
   allowed = false,
+  codec,
+  session = 0,
+  needsSetup = false,
+  lastActivity = Date.now(),
   state = {
     apps: [],
     profiles: [],
@@ -660,6 +670,7 @@ function applicationsView() {
   return section;
 }
 function downloadBlob(blob, name) {
+  if (!allowed) return;
   const url = URL.createObjectURL(blob);
   const a = node("a");
   a.href = url;
@@ -1317,11 +1328,13 @@ $("today").textContent = new Date().toLocaleDateString(undefined, {
 });
 $("backup").onclick = act(async () => {
   downloadBlob(
-    new Blob([await api.backup()], { type: "application/json" }),
+    new Blob([await codec.backup(JSON.parse(await api.backup()))], {
+      type: "application/json",
+    }),
     "samra-jobs-backup-" + today() + ".json",
   );
   say(
-    "Complete backup downloaded, including saved documents. Keep it somewhere you trust.",
+    "Encrypted backup downloaded, including saved documents. Keep your vault password; it is needed to restore this backup.",
   );
 });
 $("restore").onclick = () => {
@@ -1329,13 +1342,10 @@ $("restore").onclick = () => {
   const file = required(field("Jobs backup JSON", "backup", "", "file"));
   file.lastChild.accept = ".json,application/json";
   const preview = node("p", undefined, "fine");
-  let backup;
-  file.lastChild.onchange = act(async (e) => {
-    backup = null;
-    preview.textContent = "";
-    const selected = e.target.files[0];
-    if (!selected) return;
-    const parsed = JSON.parse(await selected.text());
+  let backup, encrypted;
+  const password = field("Backup password", "password", "", "password");
+  password.hidden = true;
+  const previewBackup = (parsed) => {
     validateBackup(parsed);
     backup = parsed;
     preview.textContent =
@@ -1344,9 +1354,33 @@ $("restore").onclick = () => {
       parsed.data.documents.length +
       " document versions, " +
       parsed.files.length +
-      " files. Restoring replaces the Jobs data in this browser. Export your current backup first.";
+      " files. Restoring replaces this browser’s Jobs data. Export your current backup first.";
+  };
+  const read = button("Read encrypted backup", async () => {
+    if (!encrypted) throw Error("Choose an encrypted backup.");
+    previewBackup(await decryptBackup(encrypted, password.lastChild.value));
+    password.lastChild.value = "";
   });
-  f.append(file, preview);
+  read.hidden = true;
+  file.lastChild.onchange = act(async (e) => {
+    backup = null;
+    encrypted = null;
+    preview.textContent = "";
+    password.lastChild.value = "";
+    password.hidden = true;
+    read.hidden = true;
+    const selected = e.target.files[0];
+    if (!selected) return;
+    const parsed = JSON.parse(await selected.text());
+    if (parsed.format === "samra-jobs-encrypted-backup") {
+      encrypted = parsed;
+      password.hidden = false;
+      read.hidden = false;
+      preview.textContent =
+        "Enter the password used when this backup was exported, then read it.";
+    } else previewBackup(parsed);
+  });
+  f.append(file, password, read, preview);
   formSubmit(f, "Replace this browser’s Jobs data", async () => {
     if (!backup) throw Error("Choose and review a valid Jobs backup first.");
     await api.restore(backup);
@@ -1357,19 +1391,138 @@ $("restore").onclick = () => {
   });
   modal("Restore a complete Jobs backup", f);
 };
-try {
-  api = await createLocalAPI();
-  allowed = true;
-  await refresh();
-  $("gate").hidden = true;
-  $("workspace").hidden = false;
-  $("backup").disabled = false;
-  $("restore").disabled = false;
-  render();
-  say("Ready. Changes are saved in this browser on this device.");
-} catch (error) {
+
+function lockVault() {
+  session++;
   allowed = false;
+  codec?.close();
+  codec = null;
+  api?.close();
+  api = null;
+  state = {
+    apps: [],
+    profiles: [],
+    documents: [],
+    leads: [],
+    settings: {},
+    imports: [],
+  };
+  $("content").replaceChildren();
+  $("stats").replaceChildren();
+  $("alert-count").textContent = "—";
+  $("editor").close();
+  $("dialog-content").replaceChildren();
+  $("dialog-title").textContent = "Application";
+  $("dialog-notice").textContent = "";
+  $("workspace").hidden = true;
+  $("gate").hidden = false;
+  $("backup").disabled = true;
+  $("restore").disabled = true;
+  $("lock").hidden = true;
+  $("vault-form").reset();
+  $("vault-form").hidden = false;
+  say("Jobs locked. Enter your vault password to continue.");
+}
+$("lock").onclick = lockVault;
+$("vault-form").onsubmit = act(async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget,
+    b = $("vault-submit"),
+    ticket = ++session;
+  const fields = new FormData(form),
+    password = fields.get("password");
+  if (needsSetup && password !== fields.get("confirm"))
+    throw Error("Passwords do not match.");
+  b.disabled = true;
+  let opened;
+  try {
+    opened = await (needsSetup ? setupVault(password) : unlockVault(password));
+    form.reset();
+    if (ticket !== session) {
+      opened.close();
+      return;
+    }
+    codec = opened;
+    api = await createLocalAPI("samra-jobs-local-v1", codec);
+    if (ticket !== session) {
+      api.close();
+      opened.close();
+      return;
+    }
+    await refresh();
+    if (ticket !== session) return;
+    needsSetup = false;
+    allowed = true;
+    $("confirm-label").hidden = true;
+    form.elements.confirm.required = false;
+    $("vault-submit").textContent = "Unlock Jobs";
+    form.elements.password.autocomplete = "current-password";
+    $("gate-title").textContent = "Unlock your Jobs vault";
+    $("gate-help").textContent =
+      "Enter the password you created in this browser.";
+    $("gate").hidden = true;
+    $("workspace").hidden = false;
+    $("backup").disabled = false;
+    $("restore").disabled = false;
+    $("lock").hidden = false;
+    lastActivity = Date.now();
+    render();
+    say("Vault unlocked. Changes are encrypted in this browser.");
+  } catch (error) {
+    opened?.close();
+    if (ticket === session) {
+      api?.close();
+      api = null;
+      codec = null;
+    }
+    throw error;
+  } finally {
+    b.disabled = false;
+  }
+});
+const idleCheck = () => {
+  if (allowed && Date.now() - lastActivity >= 15 * 60 * 1000) lockVault();
+};
+for (const name of ["pointerdown", "keydown"])
+  document.addEventListener(
+    name,
+    () => {
+      idleCheck();
+      if (allowed) lastActivity = Date.now();
+    },
+    { passive: true },
+  );
+setInterval(idleCheck, 30000);
+document.addEventListener("visibilitychange", idleCheck);
+window.addEventListener("pagehide", lockVault);
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) location.reload();
+});
+try {
+  const info = await inspectVault();
+  needsSetup = !info.exists;
+  $("gate-title").textContent = needsSetup
+    ? "Create your Jobs password"
+    : "Unlock your Jobs vault";
+  $("gate-help").textContent = needsSetup
+    ? info.hasLegacy
+      ? "Your existing " +
+        info.legacyCount +
+        " applications and attached files will be encrypted in place. Close other Jobs tabs first. Choose a strong password and keep it safe."
+      : "Choose a password of at least 12 characters. It encrypts records and files in this browser; it is never sent to a server."
+    : "Enter the password you created in this browser.";
+  $("confirm-label").hidden = !needsSetup;
+  $("vault-form").elements.confirm.required = needsSetup;
+  $("vault-form").elements.password.minLength = needsSetup ? 12 : 1;
+  $("vault-form").elements.password.autocomplete = needsSetup
+    ? "new-password"
+    : "current-password";
+  $("vault-submit").textContent = needsSetup
+    ? "Create password & open Jobs"
+    : "Unlock Jobs";
+  $("vault-form").hidden = false;
+} catch (error) {
   say(error.message, true);
-  $("gate").textContent =
-    "Jobs could not open browser storage. Enable site storage and reload. No temporary-only mode is used, so your work will not silently disappear on refresh.";
+  $("gate-help").textContent =
+    "Jobs could not open browser storage. Enable site storage and reload. Existing data has not been replaced.";
 }

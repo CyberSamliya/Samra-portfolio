@@ -1,23 +1,46 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const ROOT = "/Samra-portfolio";
+const PASSWORD = "synthetic-vault-password-2026";
+async function enter(page) {
+  await expect(
+    page.getByLabel("Vault password", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Vault password", { exact: true }).fill(PASSWORD);
+  if (
+    await page
+      .getByRole("button", { name: "Create password & open Jobs" })
+      .isVisible()
+  ) {
+    await page.getByLabel("Confirm password", { exact: true }).fill(PASSWORD);
+    await page
+      .getByRole("button", { name: "Create password & open Jobs" })
+      .click();
+  } else
+    await page
+      .getByRole("button", { name: "Unlock Jobs", exact: true })
+      .click();
+  await expect(page.locator("#workspace")).toBeVisible();
+}
 async function open(page) {
   await page.goto(ROOT + "/admin/jobs/index.html");
-  await expect(
-    page.getByRole("heading", { name: "Find Jobs", exact: true }),
-  ).toBeVisible();
+  await enter(page);
 }
 async function data(page) {
-  return page.evaluate(async () => {
+  return page.evaluate(async (password) => {
     const { createLocalAPI } =
       await import("/Samra-portfolio/admin/jobs/src/local-api.js");
-    const api = await createLocalAPI();
+    const { unlockVault } =
+      await import("/Samra-portfolio/admin/jobs/src/vault.js");
+    const codec = await unlockVault(password);
+    const api = await createLocalAPI(undefined, codec);
     try {
       return (await api.snapshot()).data;
     } finally {
       api.close();
+      codec.close();
     }
-  });
+  }, PASSWORD);
 }
 test("real browser-local workflow persists files and records, backs up and restores on another browser", async ({
   page,
@@ -31,7 +54,7 @@ test("real browser-local workflow persists files and records, backs up and resto
   });
   await open(page);
   await expect(page.getByLabel("Browser storage notice")).toContainText(
-    "No login or cloud sync",
+    "no cloud account or sync",
   );
   await expect(
     page.getByRole("textbox", { name: "Password", exact: true }),
@@ -72,18 +95,17 @@ test("real browser-local workflow persists files and records, backs up and resto
   await page.getByLabel("Version label").fill("Resume v1");
   await page.getByLabel("Editable draft text").fill("Verified coursework.");
   const bytes = Buffer.from("%PDF-1.4\nsynthetic exact file bytes\n%%EOF");
-  await page
-    .getByLabel("Finished PDF or DOCX")
-    .setInputFiles({
-      name: "resume.pdf",
-      mimeType: "application/pdf",
-      buffer: bytes,
-    });
+  await page.getByLabel("Finished PDF or DOCX").setInputFiles({
+    name: "resume.pdf",
+    mimeType: "application/pdf",
+    buffer: bytes,
+  });
   await page.getByRole("button", { name: "Save document version" }).click();
   await expect(page.locator("#notice")).toContainText(
     "Document version saved in this browser",
   );
   await page.reload();
+  await enter(page);
   await expect(
     page.getByRole("button", { name: "View application" }),
   ).toHaveCount(1);
@@ -114,7 +136,17 @@ test("real browser-local workflow persists files and records, backs up and resto
     .getByRole("button", { name: "Export backup", exact: true })
     .click();
   const file = await (await backupWait).path();
-  const backup = JSON.parse(await readFile(file, "utf8"));
+  const encrypted = JSON.parse(await readFile(file, "utf8"));
+  expect(encrypted.format).toBe("samra-jobs-encrypted-backup");
+  expect(encrypted.data).toBeUndefined();
+  const backup = await page.evaluate(
+    async ({ encrypted, password }) => {
+      const { decryptBackup } =
+        await import("/Samra-portfolio/admin/jobs/src/vault.js");
+      return decryptBackup(encrypted, password);
+    },
+    { encrypted, password: PASSWORD },
+  );
   expect(backup.files).toHaveLength(1);
   expect(Buffer.from(backup.files[0].base64, "base64")).toEqual(bytes);
   expect(backup.data.history.length).toBeGreaterThanOrEqual(2);
@@ -127,6 +159,8 @@ test("real browser-local workflow persists files and records, backs up and resto
       .getByRole("button", { name: "Restore backup", exact: true })
       .click();
     await second.getByLabel("Jobs backup JSON").setInputFiles(file);
+    await second.getByLabel("Backup password", { exact: true }).fill(PASSWORD);
+    await second.getByRole("button", { name: "Read encrypted backup" }).click();
     await expect(second.getByRole("dialog")).toContainText("1 applications");
     await second
       .getByRole("button", { name: "Replace this browser’s Jobs data" })
@@ -255,6 +289,7 @@ test("local transactions deduplicate, preserve submitted versions, handle concur
     .click();
   await expect(page.locator("#notice")).toContainText("Application saved");
   await second.reload();
+  await enter(second);
   await second
     .getByRole("link", { name: "Applications", exact: false })
     .click();
@@ -273,15 +308,13 @@ test("CSV review, profile tailoring and malformed email work without authenticat
   await expect(page.locator("#notice")).toContainText("Master profile saved");
   await page.getByRole("link", { name: "Applications", exact: false }).click();
   await page.getByRole("button", { name: "Import CSV" }).click();
-  await page
-    .getByLabel("CSV file")
-    .setInputFiles({
-      name: "jobs.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        "title,company,posting_url\nAnalyst,Synthetic,https://example.com/jobs/1\nAnalyst,Synthetic,https://example.com/jobs/1?utm_source=email\nAnalyst,Synthetic,https://example.com/jobs/2",
-      ),
-    });
+  await page.getByLabel("CSV file").setInputFiles({
+    name: "jobs.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "title,company,posting_url\nAnalyst,Synthetic,https://example.com/jobs/1\nAnalyst,Synthetic,https://example.com/jobs/1?utm_source=email\nAnalyst,Synthetic,https://example.com/jobs/2",
+    ),
+  });
   await expect(page.getByRole("dialog")).toContainText("3 records to review");
   await page
     .getByRole("button", { name: "Confirm import", exact: true })
@@ -368,4 +401,222 @@ test("blocked storage fails visibly, public routes and mobile layout remain usab
   expect(
     (await page.request.get(ROOT + "/franklin-dewin-andujar.pdf")).status(),
   ).toBe(200);
+});
+
+test("vault migrates existing plaintext atomically, rejects wrong passwords, encrypts files, and clears the UI on lock", async ({
+  page,
+}) => {
+  await page.goto(ROOT + "/index.html");
+  await page.evaluate(async () => {
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const api = await createLocalAPI();
+    const app = await api.insert("applications", {
+      title: "Confidential role sentinel",
+      company: "Synthetic",
+      posting_url: "https://example.com/private",
+    });
+    const doc = await api.insert("documents", {
+      application_id: app.id,
+      kind: "Resume",
+      version: "v1",
+      draft_text: "",
+      filename: "private.pdf",
+      object_path: "device/migration/file",
+      mime_type: "application/pdf",
+    });
+    await api.upload(
+      doc.object_path,
+      new Blob(["%PDF-1.4 confidential file sentinel"], {
+        type: "application/pdf",
+      }),
+    );
+    await api.update("documents", doc.id, { uploaded: true });
+    const legacy = await api.snapshot();
+    api.close();
+    await new Promise((resolve, reject) => {
+      const r = indexedDB.deleteDatabase("samra-jobs-local-v1");
+      r.onsuccess = resolve;
+      r.onerror = reject;
+    });
+    const old = await new Promise((resolve, reject) => {
+      const r = indexedDB.open("samra-jobs-local-v1", 1);
+      r.onupgradeneeded = () => {
+        r.result.createObjectStore("records");
+        r.result.createObjectStore("files");
+      };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = reject;
+    });
+    await new Promise((resolve, reject) => {
+      const tx = old.transaction(["records", "files"], "readwrite");
+      tx.objectStore("records").put(legacy.data, "workspace");
+      for (const f of legacy.files) tx.objectStore("files").put(f.blob, f.path);
+      tx.oncomplete = resolve;
+      tx.onabort = reject;
+    });
+    old.close();
+  });
+  await page.goto(ROOT + "/admin/jobs/index.html");
+  await expect(page.locator("#gate-help")).toContainText(
+    "existing 1 applications",
+  );
+  await enter(page);
+  const raw = await page.evaluate(async () => {
+    const { openDatabase, readSnapshot } =
+      await import("/Samra-portfolio/admin/jobs/src/local-store.js");
+    const db = await openDatabase("samra-jobs-local-v1");
+    try {
+      const s = await readSnapshot(db, true);
+      return {
+        encrypted: s.workspace.encrypted,
+        fileEncrypted: s.files[0].encrypted,
+        recordsText: new TextDecoder().decode(s.workspace.ciphertext),
+        fileText: new TextDecoder().decode(s.files[0].ciphertext),
+      };
+    } finally {
+      db.close();
+    }
+  });
+  expect(raw.encrypted).toBe(true);
+  expect(raw.fileEncrypted).toBe(true);
+  expect(raw.recordsText).not.toContain("Confidential role sentinel");
+  expect(raw.fileText).not.toContain("confidential file sentinel");
+  expect((await data(page)).applications[0].title).toBe(
+    "Confidential role sentinel",
+  );
+  await page.getByRole("link", { name: "Applications", exact: false }).click();
+  await page.getByRole("button", { name: "View application" }).click();
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("button", { name: "Lock Jobs", exact: true }).click();
+  await expect(page.locator("#content")).toBeEmpty();
+  await expect(page.locator("#workspace")).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Export backup", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Vault password", { exact: true })
+    .fill("wrong-password-123");
+  await page.getByRole("button", { name: "Unlock Jobs", exact: true }).click();
+  await expect(page.locator("#notice")).toContainText("Incorrect password");
+  await expect(page.locator("#workspace")).toBeHidden();
+  await enter(page);
+  await page.getByRole("link", { name: "Applications", exact: false }).click();
+  await expect(
+    page.getByText("Confidential role sentinel", { exact: true }),
+  ).toBeVisible();
+  const rejected = await page.evaluate(async () => {
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    try {
+      await createLocalAPI();
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  expect(rejected).toBe(true);
+  await page.reload();
+  await expect(page.locator("#workspace")).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Unlock Jobs", exact: true }),
+  ).toBeVisible();
+});
+
+test("vault rejects mismatched setup passwords, detects tampered backups, and auto-locks after inactivity", async ({
+  page,
+}) => {
+  await page.goto(ROOT + "/admin/jobs/index.html");
+  await page.getByLabel("Vault password", { exact: true }).fill(PASSWORD);
+  await page
+    .getByLabel("Confirm password", { exact: true })
+    .fill("not-the-same-password");
+  await page
+    .getByRole("button", { name: "Create password & open Jobs" })
+    .click();
+  await expect(page.locator("#notice")).toContainText("Passwords do not match");
+  await expect(page.locator("#workspace")).toBeHidden();
+  await enter(page);
+  const results = await page.evaluate(async (password) => {
+    const { unlockVault, decryptBackup } =
+      await import("/Samra-portfolio/admin/jobs/src/vault.js");
+    const codec = await unlockVault(password);
+    try {
+      const backup = JSON.parse(
+        await codec.backup({ sentinel: "private backup content" }),
+      );
+      let wrong = false,
+        tampered = false;
+      try {
+        await decryptBackup(backup, "a-wrong-password");
+      } catch {
+        wrong = true;
+      }
+      const c = atob(backup.ciphertext);
+      backup.ciphertext = btoa(
+        String.fromCharCode(c.charCodeAt(0) ^ 1) + c.slice(1),
+      );
+      try {
+        await decryptBackup(backup, password);
+      } catch {
+        tampered = true;
+      }
+      return { wrong, tampered };
+    } finally {
+      codec.close();
+    }
+  }, PASSWORD);
+  expect(results).toEqual({ wrong: true, tampered: true });
+  // Trigger the inactivity check without waiting fifteen minutes in a test.
+  await page.evaluate(() => {
+    const old = Date.now;
+    Date.now = () => old() + 16 * 60 * 1000;
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.locator("#workspace")).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Unlock Jobs", exact: true }),
+  ).toBeVisible();
+});
+
+test("failed IndexedDB commit rolls back both records and files", async ({
+  page,
+}) => {
+  await page.goto(ROOT + "/index.html");
+  const unchanged = await page.evaluate(async () => {
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const { openDatabase, readSnapshot, commitSnapshot } =
+      await import("/Samra-portfolio/admin/jobs/src/local-store.js");
+    const api = await createLocalAPI("rollback-test");
+    const db = await openDatabase("rollback-test");
+    try {
+      const tx = db.transaction("files", "readwrite");
+      tx.objectStore("files").add(new Blob(["original"]), "existing");
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onabort = reject;
+      });
+      const before = await readSnapshot(db, true);
+      let failed = false;
+      try {
+        await commitSnapshot(db, before, { shouldNotPersist: true }, [
+          { path: "existing", value: new Blob(["replacement"]) },
+        ]);
+      } catch {
+        failed = true;
+      }
+      const after = await readSnapshot(db, true);
+      return (
+        failed &&
+        JSON.stringify(before.workspace) === JSON.stringify(after.workspace) &&
+        before.revision === after.revision &&
+        (await after.files[0].text()) === "original"
+      );
+    } finally {
+      api.close();
+      db.close();
+    }
+  });
+  expect(unchanged).toBe(true);
 });

@@ -18,7 +18,8 @@
     <header>
       <a class="brand" href="../../index.html">SA <span>Samra Ayele</span></a>
       <div class="header-right">
-        <span class="private">Device-local workspace</span
+        <span class="private">Encrypted local vault</span
+        ><button id="lock" class="quiet" hidden>Lock Jobs</button
         ><button id="backup" class="quiet" disabled>Export backup</button
         ><button id="restore" class="quiet" disabled>Restore backup</button
         ><a href="../../index.html">Portfolio ↗</a>
@@ -48,15 +49,38 @@
       <main id="main" tabindex="-1">
         <div id="notice" role="status" aria-live="polite"></div>
         <section class="note local-notice" aria-label="Browser storage notice">
-          <strong>Saved only in this browser, on this device.</strong>
+          <strong>Password-encrypted Jobs data · this browser only.</strong>
           <p>
-            No login or cloud sync. Anyone using this browser profile can access
-            your Jobs data. Clearing site data, using a different browser, or
-            changing the site address can make it unavailable. Export a complete
-            backup regularly; CSV does not include your files.
+            Your portfolio stays public. There is no cloud account or sync. Keep
+            your vault password safe; it cannot be recovered. Export encrypted
+            backups regularly. Files and CSVs you download separately are not
+            password-protected.
           </p>
         </section>
-        <section id="gate"><p>Opening browser storage…</p></section>
+        <section id="gate" class="card signin">
+          <p class="eyebrow">ADMIN / JOBS</p>
+          <h1 id="gate-title">Open your Jobs vault</h1>
+          <p id="gate-help">Checking this browser's vault…</p>
+          <form id="vault-form" hidden>
+            <label
+              >Vault password<input
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required /></label
+            ><label id="confirm-label"
+              >Confirm password<input
+                name="confirm"
+                type="password"
+                autocomplete="new-password" /></label
+            ><button id="vault-submit">Unlock Jobs</button>
+          </form>
+          <p class="fine">
+            This protects stored Jobs data on this device. Other browsers have
+            their own vaults. There is no password reset. Encrypted backups also
+            require the password used at export.
+          </p>
+        </section>
         <div id="workspace" hidden>
           <div class="page-heading">
             <div>

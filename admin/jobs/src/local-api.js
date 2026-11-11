@@ -1,3 +1,4 @@
+import { openLocalStore } from "./local-store.js";
 import {
   STATUSES,
   normalizeURL,
@@ -17,7 +18,7 @@ const TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 const now = () => new Date().toISOString();
-function initial() {
+export function initialData() {
   return Object.fromEntries(
     TABLES.map((n) => [
       n,
@@ -70,53 +71,17 @@ function validateApplication(record, data) {
   )
     throw Error("Master profile not found.");
 }
-export async function createLocalAPI(dbName = "samra-jobs-local-v1") {
-  const db = await new Promise((resolve, reject) => {
-    const r = indexedDB.open(dbName, 1);
-    r.onupgradeneeded = () => {
-      r.result.createObjectStore("records");
-      r.result.createObjectStore("files");
-    };
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () =>
-      reject(
-        Error(
-          "Browser storage is unavailable. Allow site storage to use Jobs.",
-        ),
-      );
-    r.onblocked = () => reject(Error("Close other Jobs tabs and try again."));
-  });
-  db.onversionchange = () => db.close();
-  function transaction(mode, change) {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(["records", "files"], mode),
-        store = tx.objectStore("records");
-      let result, failure;
-      const r = store.get("workspace");
-      r.onsuccess = () => {
-        try {
-          const data = r.result || initial();
-          result = change(data, tx.objectStore("files"));
-          if (mode === "readwrite") store.put(data, "workspace");
-        } catch (e) {
-          failure = e;
-          tx.abort();
-        }
-      };
-      tx.oncomplete = () => resolve(result);
-      tx.onabort = () =>
-        reject(
-          failure ||
-            Error(
-              tx.error?.name === "QuotaExceededError"
-                ? "Browser storage is full. Export a backup and free storage before retrying."
-                : "Could not save browser data. Keep this tab open and export a backup.",
-            ),
-        );
-      tx.onerror = () => {};
-    });
+export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
+  const store = await openLocalStore(dbName, codec, initialData);
+  const transaction = store.transaction;
+  if (!codec) {
+    try {
+      await transaction("readwrite", () => {});
+    } catch (e) {
+      store.close();
+      throw e;
+    }
   }
-  await transaction("readwrite", () => {});
   const api = {
     list: (n) =>
       transaction("readonly", (d) => {
@@ -217,31 +182,7 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1") {
         if (!doc) throw Error("Document version not found");
         files.add(file, path);
       }),
-    download: (path) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction(["records", "files"]);
-        let doc;
-        const r = tx.objectStore("records").get("workspace");
-        r.onsuccess = () => {
-          doc = r.result?.documents.find(
-            (d) => d.object_path === path && d.uploaded,
-          );
-          if (!doc) {
-            reject(Error("Saved document not found"));
-            return;
-          }
-          const file = tx.objectStore("files").get(path);
-          file.onsuccess = () =>
-            file.result
-              ? resolve(file.result)
-              : reject(
-                  Error(
-                    "File missing from browser storage. Restore a complete backup.",
-                  ),
-                );
-        };
-        tx.onerror = () => reject(Error("Could not read browser file"));
-      }),
+    download: (path) => store.download(path),
     rpc: (name, args) =>
       transaction("readwrite", (d) => {
         if (name === "ingest_alert") {
@@ -302,23 +243,7 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1") {
           "This action requires a cloud backend and is not available in device-local mode.",
         );
       }),
-    snapshot: () =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction(["records", "files"]);
-        let data, keys, files;
-        const r = tx.objectStore("records").get("workspace");
-        r.onsuccess = () => (data = r.result);
-        const k = tx.objectStore("files").getAllKeys();
-        k.onsuccess = () => (keys = k.result);
-        const f = tx.objectStore("files").getAll();
-        f.onsuccess = () => (files = f.result);
-        tx.oncomplete = () =>
-          resolve({
-            data,
-            files: keys.map((path, i) => ({ path, blob: files[i] })),
-          });
-        tx.onerror = () => reject(Error("Could not create backup"));
-      }),
+    snapshot: () => store.snapshot(),
     backup: async () => {
       const { data, files } = await api.snapshot();
       const encoded = await Promise.all(
@@ -341,21 +266,8 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1") {
         files: encoded,
       });
     },
-    restore: async (backup) => {
-      const prepared = validateBackup(backup);
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(["records", "files"], "readwrite");
-        tx.objectStore("records").put(prepared.data, "workspace");
-        const files = tx.objectStore("files");
-        files.clear();
-        for (const f of prepared.files) files.add(f.blob, f.path);
-        tx.oncomplete = () => resolve();
-        tx.onabort = () =>
-          reject(Error("Restore failed. Existing data was kept."));
-        tx.onerror = () => {};
-      });
-    },
-    close: () => db.close(),
+    restore: (backup) => store.replace(validateBackup(backup)),
+    close: () => store.close(),
   };
   return api;
 }

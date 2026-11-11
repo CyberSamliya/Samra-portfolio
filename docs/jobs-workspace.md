@@ -1,25 +1,43 @@
 # Use Jobs now: device-local workspace
 
-The user approved replacing the previous owner-login/MFA requirement with browser-local
-storage. The Netlify staging site opens Jobs directly. No backend, signup, password,
-Supabase account, Gmail authorization or paid plan is needed.
+The current Jobs workspace uses a password-encrypted vault in this browser. It
+requires no Supabase project, paid plan or server account. The portfolio remains
+public; only local Jobs data is locked. This is not a shared owner identity:
+other devices/browsers have their own empty vault and password.
 
-## Where your data lives
+## Password setup and storage
 
-Records and exact PDF/DOCX file bytes are stored in **IndexedDB in your browser
-profile**, at this site's origin. The site server receives none of them. There
-is no owner authentication, cloud synchronization or encryption guarantee. Anyone
-using your browser profile can open this workspace. Submitted-version restrictions
-protect the normal editing workflow, not against someone controlling the browser.
+On first use, choose and confirm a strong password of at least 12 characters.
+The browser derives a non-exportable AES-256-GCM key using PBKDF2/SHA-256, a
+random 16-byte salt and 600,000 iterations. Every encrypted record/file uses a
+fresh random 12-byte IV and authenticated context identifying its vault and
+record. No password or key is persisted or sent to a server. Web Crypto requires
+a secure context (HTTPS on Netlify; loopback is supported for local development).
+
+Close other Jobs tabs before setup. Existing device-local Jobs data is encrypted
+in place on first setup. IndexedDB
+is upgraded to close old application connections. An atomic transaction replaces
+the record and file stores with ciphertext plus public KDF metadata; failure or
+a concurrent write leaves the prior database intact. Existing downloaded
+plaintext backups and legacy Daily Workspace data are not retroactively encrypted.
+
+Later visits require the same password. **Lock Jobs** clears the displayed records,
+forms, dialog contents and active key reference. It also locks after 15 minutes
+of inactivity and on page navigation; refresh/back navigation requires unlock.
+It cannot revoke files already downloaded or protect against malicious scripts
+on the same origin, an unlocked session, or a compromised device.
+
+**There is no password reset.** Encrypted backups also require the password used
+at export. Keep your password in a password manager. Losing it can make both the
+vault and its backups unrecoverable. Do not clear site data to fix a password error.
 
 Use your usual browser/profile, not incognito, for ongoing work. Clearing site data,
-browser eviction, device loss or switching domain can remove or hide your records.
-Export backups regularly. Netlify's project privacy settings are separate from
-this storage model; they do not create a Jobs account or sync records.
+browser eviction, device loss or changing site address can remove/hide the vault.
+Export encrypted backups regularly. Netlify project privacy is separate.
 
 ## Start using it
 
-1. Open `/admin/jobs/` on the staging site. Find Jobs opens immediately with five
+1. Open `/admin/jobs/` on the staging site. Create or unlock your vault; Find Jobs opens with five
    editable saved searches and local employer links. Job-board links open the
    original site; this app never scrapes or submits applications.
 2. **Documents:** edit the starter Cybersecurity and Operational Excellence master
@@ -52,12 +70,13 @@ this storage model; they do not create a Jobs account or sync records.
 
 **Export backup** in the header downloads one JSON file containing all applications,
 change history, leads, searches, employer settings, master profiles, drafts and
-uploaded PDF/DOCX bytes. It contains personal data in readable form (file bytes
-are base64 encoded, not encrypted). Store it in a trusted location. **CSV is not
+uploaded PDF/DOCX bytes. The JSON envelope is encrypted with the current vault password, including all
+record and file contents. Store it in a trusted location and retain that password. **CSV is not
 a full backup** and cannot restore your documents or profiles.
 
-To move to another device/browser/site address, open Jobs there, choose **Restore
-backup**, select the JSON, review its record/file counts, then explicitly choose
+To move to another device/browser/site address, open Jobs there, create/unlock a vault there, choose **Restore
+backup**, select the JSON, enter the backup’s export password and choose **Read
+encrypted backup**. Review its record/file counts, then explicitly choose
 **Replace this browser’s Jobs data**. Export the current browser's backup first.
 Restore replaces the Jobs database only; it does not affect the daily workspace.
 Validation and an atomic IndexedDB transaction keep current records if restoration
@@ -82,3 +101,12 @@ and existing applications remain unchanged. No backend or inbox has been connect
 The former cloud implementation's migrations/functions are retained solely as a
 future reference; [archived cloud notes](cloud-backend-reference.md) are not the
 current setup instructions. No Supabase SDK or credentials are used by the browser.
+
+## Validation
+
+Chromium tests exercise password setup/unlock, wrong/mismatched passwords, migration
+of existing plaintext records/files, ciphertext at rest, encrypted backup restoration
+in a separate browser context, backup tampering, manual and inactivity locking,
+refresh locking, blocked storage, normal Jobs flows and public portfolio routes.
+These are actual Web Crypto and IndexedDB tests, without a mocked backend.
+Passkeys/WebAuthn are not implemented; this version uses a local vault password.
