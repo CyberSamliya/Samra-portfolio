@@ -7,11 +7,10 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; frame-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <title>Jobs · Samra Ayele Admin</title>
     <link rel="stylesheet" href="./jobs.css" />
-    <script src="./config.js" defer></script>
     <script type="module" src="./dist/app.js"></script>
   </head>
   <body>
@@ -19,8 +18,9 @@
     <header>
       <a class="brand" href="../../index.html">SA <span>Samra Ayele</span></a>
       <div class="header-right">
-        <span class="private">Owner workspace</span
-        ><button id="signout" class="quiet" hidden>Sign out</button
+        <span class="private">Device-local workspace</span
+        ><button id="backup" class="quiet" disabled>Export backup</button
+        ><button id="restore" class="quiet" disabled>Restore backup</button
         ><a href="../../index.html">Portfolio ↗</a>
       </div>
     </header>
@@ -47,55 +47,16 @@
       </aside>
       <main id="main" tabindex="-1">
         <div id="notice" role="status" aria-live="polite"></div>
-        <section id="gate">
-          <p class="eyebrow">ADMIN / JOBS</p>
-          <h1>Your next chapter,<br />in one place.</h1>
-          <p class="lead">
-            Discover opportunities. Prepare with intention.<br />Keep every
-            application moving.
-          </p>
-          <div class="card signin">
-            <span class="pill">Private · Samra only</span>
-            <h2>Sign in to your workspace</h2>
-            <p>Use your owner account, then verify with your authenticator.</p>
-            <p id="setup-message" class="muted"></p>
-            <form id="signin-form">
-              <label
-                >Email<input
-                  name="email"
-                  type="email"
-                  autocomplete="username"
-                  required /></label
-              ><label
-                >Password<input
-                  name="password"
-                  type="password"
-                  autocomplete="current-password"
-                  required /></label
-              ><button type="submit">Continue →</button>
-            </form>
-            <form id="mfa-form" hidden>
-              <p id="mfa-instructions"></p>
-              <img
-                id="mfa-qr"
-                alt="Authenticator enrollment QR code"
-                hidden
-              /><label
-                >Authenticator code<input
-                  name="code"
-                  inputmode="numeric"
-                  autocomplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxlength="6"
-                  required /></label
-              ><button>Verify & open Jobs</button>
-            </form>
-          </div>
-          <p class="fine">
-            Application records and documents are available only after owner
-            verification and MFA.
+        <section class="note local-notice" aria-label="Browser storage notice">
+          <strong>Saved only in this browser, on this device.</strong>
+          <p>
+            No login or cloud sync. Anyone using this browser profile can access
+            your Jobs data. Clearing site data, using a different browser, or
+            changing the site address can make it unavailable. Export a complete
+            backup regularly; CSV does not include your files.
           </p>
         </section>
+        <section id="gate"><p>Opening browser storage…</p></section>
         <div id="workspace" hidden>
           <div class="page-heading">
             <div>
@@ -111,8 +72,8 @@
           <div id="content"></div>
         </div>
         <noscript
-          >JavaScript is required for private sign-in. The public portfolio
-          remains available.</noscript
+          >JavaScript and browser storage are required for Jobs. The public
+          portfolio remains available.</noscript
         >
       </main>
     </div>

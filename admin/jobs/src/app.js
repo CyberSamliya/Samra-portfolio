@@ -1,4 +1,4 @@
-import { createAPI } from "./api.js";
+import { createLocalAPI, validateBackup } from "./local-api.js";
 import {
   STATUSES,
   TRACKS,
@@ -73,7 +73,6 @@ const localDateTime = () =>
     .slice(0, 16);
 let api,
   allowed = false,
-  epoch = 0,
   state = {
     apps: [],
     profiles: [],
@@ -82,44 +81,13 @@ let api,
     settings: {},
     imports: [],
   };
-function clearPrivate() {
-  epoch++;
-  allowed = false;
-  state = {
-    apps: [],
-    profiles: [],
-    documents: [],
-    leads: [],
-    settings: {},
-    imports: [],
-  };
-  $("workspace").hidden = true;
-  $("gate").hidden = false;
-  $("signout").hidden = true;
-  $("content").replaceChildren();
-  $("stats").replaceChildren();
-  $("dialog-content").replaceChildren();
-  $("editor").close();
-  $("alert-count").textContent = "—";
-  $("mfa-qr").src = "";
-  $("mfa-qr").hidden = true;
-  $("signin-form").reset();
-  $("mfa-form").reset();
-}
 async function refresh() {
-  const ticket = epoch;
-  const authorized = await api.rpc("authorized");
-  if (!authorized) {
-    clearPrivate();
-    throw Error("Owner verification and MFA are required. Sign in again.");
-  }
   const data = await Promise.all(
     ["applications", "profiles", "documents", "leads", "import_state"].map(
       (n) => api.list(n),
     ),
   );
   const settings = await api.settings();
-  if (ticket !== epoch) return;
   [state.apps, state.profiles, state.documents, state.leads, state.imports] =
     data;
   state.settings = Object.fromEntries(settings.map((x) => [x.key, x.value]));
@@ -571,9 +539,11 @@ function applicationsView() {
         await refresh();
         downloadBlob(
           new Blob([exportCSV(state.apps)], { type: "text/csv;charset=utf-8" }),
-          "applications-private.csv",
+          "applications.csv",
         );
-        say("Private export started. Store it securely.");
+        say(
+          "CSV export started. Use the full backup to include files and profiles.",
+        );
       }),
       button("＋ Add job", () => editApplication(), false),
     ),
@@ -855,7 +825,7 @@ function handoff(app) {
     node(
       "pre",
       profile?.content ||
-        "Select and complete a private master résumé in Documents.",
+        "Select and complete a browser-local master résumé in Documents.",
       "draft",
     ),
     button("Copy selected résumé", async () => {
@@ -875,7 +845,7 @@ function documentsView() {
       "section-top",
       div(
         "",
-        node("h2", "Private master résumés"),
+        node("h2", "Master résumés in this browser"),
         node(
           "p",
           "Start with verified experience. Nothing is copied from the public portfolio automatically.",
@@ -948,14 +918,14 @@ function profileEditor(profile = {}) {
       "textarea",
     ),
   );
-  formSubmit(f, "Save private profile", async (values) => {
+  formSubmit(f, "Save profile", async (values) => {
     await (profile.id
       ? api.update("profiles", profile.id, values)
       : api.insert("profiles", values));
     await refresh();
     $("editor").close();
     render();
-    say("Private master profile saved.");
+    say("Master profile saved in this browser.");
   });
   modal("Master résumé profile", f);
 }
@@ -990,15 +960,13 @@ function documentRow(doc) {
     );
   if (doc.uploaded) {
     actions.append(
-      button("Download privately", async () => {
+      button("Download file", async () => {
         const blob = await api.download(doc.object_path);
         downloadBlob(blob, doc.filename);
       }),
-      button("Preview privately", async () => {
+      button("Preview file", async () => {
         if (doc.mime_type !== "application/pdf") {
-          say(
-            "DOCX preview is available by private download in your document editor.",
-          );
+          say("Download this DOCX and open it in your document editor.");
           return;
         }
         const blob = await api.download(doc.object_path);
@@ -1006,15 +974,15 @@ function documentRow(doc) {
           new Blob([blob], { type: "application/pdf" }),
         );
         const frame = node("iframe", undefined, "preview");
-        frame.title = "Private PDF preview";
+        frame.title = "Saved PDF preview";
         frame.setAttribute("sandbox", "");
         frame.src = url;
         modal(
-          "Private document preview",
+          "Document preview",
           frame,
           node(
             "p",
-            "This preview uses an authorized download, never a public or signed link.",
+            "This preview reads the file stored in this browser. It is not uploaded.",
             "fine",
           ),
         );
@@ -1081,9 +1049,9 @@ function documentEditor(app, doc = {}) {
       if (!pdf && !docx) throw Error("Choose a valid PDF or DOCX.");
       if (doc.object_path)
         throw Error("Create a new version for a different file.");
-      const user = (await api.unwrap(api.client.auth.getUser())).user;
+
       record.id = doc.id || crypto.randomUUID();
-      record.object_path = [user.id, app.id, record.id].join("/");
+      record.object_path = ["device", app.id, record.id].join("/");
       record.filename = file.name;
       record.mime_type = pdf
         ? "application/pdf"
@@ -1103,7 +1071,7 @@ function documentEditor(app, doc = {}) {
     await refresh();
     $("editor").close();
     render();
-    say("Document version saved privately.");
+    say("Document version saved in this browser.");
   });
   modal("Document for " + app.title, f);
 }
@@ -1276,80 +1244,16 @@ function alertsView() {
     modal("Review extracted leads", preview);
   });
   outer.append(f);
-  const imp = state.imports[0] || {};
-  const status = div(
-    "card",
+  outer.append(
     div(
-      "section-top",
-      node("h2", "Dedicated inbox import"),
-      badge(imp.connected ? "Connected" : "Disconnected"),
-    ),
-    node(
-      "p",
-      "Gmail API · one dedicated job-alert inbox · read-only · manual runs",
-      "fine",
-    ),
-    node(
-      "p",
-      "Last successful run: " +
-        (imp.last_success
-          ? new Date(imp.last_success).toLocaleString()
-          : "Never") +
-        " · Last run: " +
-        (imp.imported || 0) +
-        " messages / " +
-        (imp.leads || 0) +
-        " leads",
-      "fine",
+      "note",
+      node("h3", "Paste or import your daily alerts"),
+      node(
+        "p",
+        "Gmail, Outlook and Yahoo alerts can be pasted above. Automatic inbox connections need a backend and are not enabled in device-local mode.",
+      ),
     ),
   );
-  if (imp.error) status.append(node("p", imp.error, "danger"));
-  status.append(
-    node(
-      "p",
-      "Live access requires your authorization and private server configuration. No inbox is connected by default.",
-      "fine",
-    ),
-    div(
-      "row",
-      button("Authorize dedicated inbox", () => {
-        const box = div(
-          "stack",
-          node(
-            "p",
-            "Only continue after privately configuring the dedicated Gmail account and read-only OAuth grant. This enables imports from that account; it does not connect your personal mail automatically.",
-          ),
-          button(
-            "I authorize this dedicated inbox",
-            async () => {
-              await api.inbox("connect");
-              await refresh();
-              $("editor").close();
-              render();
-              say("Dedicated inbox authorized. Run an import when ready.");
-            },
-            false,
-          ),
-        );
-        modal("Authorize a live inbox connection", box);
-      }),
-      button("Import / Retry", async () => {
-        const result = await api.inbox("run");
-        await refresh();
-        render();
-        say(result.message || "Import complete.");
-      }),
-      button("Disconnect", async () => {
-        await api.inbox("disconnect");
-        await refresh();
-        render();
-        say(
-          "Inbox disabled. Revoke the OAuth grant in Google Account settings to remove provider authorization.",
-        );
-      }),
-    ),
-  );
-  outer.append(status);
   const queue = div(
     "card",
     node("h2", "Review queue"),
@@ -1405,118 +1309,67 @@ function alertsView() {
   outer.append(queue);
   return outer;
 }
-async function unlock() {
-  const ticket = epoch;
-  const yes = await api.rpc("authorized");
-  if (ticket !== epoch) return;
-  if (!yes)
-    throw Error(
-      "This account is not the configured owner, or MFA is incomplete.",
-    );
-  allowed = true;
-  await refresh();
-  if (ticket !== epoch || !allowed) return;
-  $("gate").hidden = true;
-  $("workspace").hidden = false;
-  $("signout").hidden = false;
-  $("mfa-form").hidden = true;
-  $("mfa-form").reset();
-  $("mfa-qr").src = "";
-  $("mfa-qr").hidden = true;
-  render();
-  say("Owner verified. Your workspace is private.");
-}
-let factorId;
-async function startMFA() {
-  const { currentLevel } = await api.unwrap(
-    api.client.auth.mfa.getAuthenticatorAssuranceLevel(),
-  );
-  if (currentLevel === "aal2") {
-    await unlock();
-    return;
-  }
-  const { all, totp } = await api.unwrap(api.client.auth.mfa.listFactors());
-  const verified = totp.find((f) => f.status === "verified");
-  if (verified) {
-    factorId = verified.id;
-    $("mfa-instructions").textContent =
-      "Enter the current code from your authenticator.";
-  } else {
-    const pending = all.find(
-      (f) => f.factor_type === "totp" && f.status === "unverified",
-    );
-    if (pending)
-      await api.unwrap(api.client.auth.mfa.unenroll({ factorId: pending.id }));
-    const enrollment = await api.unwrap(
-      api.client.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Samra Jobs",
-      }),
-    );
-    factorId = enrollment.id;
-    $("mfa-qr").src = enrollment.totp.qr_code;
-    $("mfa-qr").hidden = false;
-    $("mfa-instructions").textContent =
-      "Scan this QR code with your authenticator, then enter the code to finish enrollment.";
-  }
-  $("signin-form").hidden = true;
-  $("mfa-form").hidden = false;
-  $("signout").hidden = false;
-}
-$("signin-form").onsubmit = act(async (e) => {
-  e.preventDefault();
-  if (!api) throw Error("The private backend has not been configured yet.");
-  const f = new FormData(e.currentTarget);
-  await api.unwrap(
-    api.client.auth.signInWithPassword({
-      email: f.get("email"),
-      password: f.get("password"),
-    }),
-  );
-  $("signin-form").reset();
-  await startMFA();
-});
-$("mfa-form").onsubmit = act(async (e) => {
-  e.preventDefault();
-  const code = new FormData(e.currentTarget).get("code");
-  const { id } = await api.unwrap(api.client.auth.mfa.challenge({ factorId }));
-  await api.unwrap(
-    api.client.auth.mfa.verify({ factorId, challengeId: id, code }),
-  );
-  await unlock();
-});
-$("signout").onclick = act(async () => {
-  clearPrivate();
-  $("signin-form").hidden = false;
-  $("mfa-form").hidden = true;
-  await api.unwrap(api.client.auth.signOut());
-  say("Signed out. Private records cleared from this page.");
-});
+
 $("today").textContent = new Date().toLocaleDateString(undefined, {
   month: "long",
   day: "numeric",
   year: "numeric",
 });
-const config = window.JOBS_CONFIG;
-if (config?.supabaseUrl && config?.publishableKey) {
-  try {
-    const url = new URL(config.supabaseUrl);
-    if (url.protocol !== "https:" || !url.hostname.endsWith(".supabase.co"))
-      throw Error("Use your hosted Supabase HTTPS URL.");
-    api = createAPI(config);
-    api.client.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        clearPrivate();
-        $("signin-form").hidden = false;
-        $("mfa-form").hidden = true;
-      }
-    });
-  } catch (e) {
-    say(e.message, true);
-  }
-}
-if (!api) {
-  $("setup-message").textContent =
-    "Private sign-in is not configured yet. The public portfolio is available; no Jobs data is stored on this site.";
-  $("signin-form").querySelector("button").disabled = true;
+$("backup").onclick = act(async () => {
+  downloadBlob(
+    new Blob([await api.backup()], { type: "application/json" }),
+    "samra-jobs-backup-" + today() + ".json",
+  );
+  say(
+    "Complete backup downloaded, including saved documents. Keep it somewhere you trust.",
+  );
+});
+$("restore").onclick = () => {
+  const f = node("form");
+  const file = required(field("Jobs backup JSON", "backup", "", "file"));
+  file.lastChild.accept = ".json,application/json";
+  const preview = node("p", undefined, "fine");
+  let backup;
+  file.lastChild.onchange = act(async (e) => {
+    backup = null;
+    preview.textContent = "";
+    const selected = e.target.files[0];
+    if (!selected) return;
+    const parsed = JSON.parse(await selected.text());
+    validateBackup(parsed);
+    backup = parsed;
+    preview.textContent =
+      parsed.data.applications.length +
+      " applications, " +
+      parsed.data.documents.length +
+      " document versions, " +
+      parsed.files.length +
+      " files. Restoring replaces the Jobs data in this browser. Export your current backup first.";
+  });
+  f.append(file, preview);
+  formSubmit(f, "Replace this browser’s Jobs data", async () => {
+    if (!backup) throw Error("Choose and review a valid Jobs backup first.");
+    await api.restore(backup);
+    await refresh();
+    $("editor").close();
+    render();
+    say("Backup restored to this browser.");
+  });
+  modal("Restore a complete Jobs backup", f);
+};
+try {
+  api = await createLocalAPI();
+  allowed = true;
+  await refresh();
+  $("gate").hidden = true;
+  $("workspace").hidden = false;
+  $("backup").disabled = false;
+  $("restore").disabled = false;
+  render();
+  say("Ready. Changes are saved in this browser on this device.");
+} catch (error) {
+  allowed = false;
+  say(error.message, true);
+  $("gate").textContent =
+    "Jobs could not open browser storage. Enable site storage and reload. No temporary-only mode is used, so your work will not silently disappear on refresh.";
 }

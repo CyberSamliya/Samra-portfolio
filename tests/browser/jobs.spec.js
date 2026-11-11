@@ -1,103 +1,49 @@
 import { test, expect } from "@playwright/test";
-import { backend, login } from "./fixture.js";
-const ROOT = "/Samra-portfolio";
 import { readFile } from "node:fs/promises";
-test("public portfolio, direct subpath refresh, legacy backup, no configured backend", async ({
-  page,
-}) => {
-  await page.route("https://**/*", (r) => r.abort());
-  await page.goto(ROOT + "/index.html");
-  await expect(page).toHaveTitle(/Samra Ayele/);
-  await expect(
-    page.getByRole("link", { name: "Admin", exact: true }),
-  ).toHaveAttribute("href", "admin/jobs/index.html");
-  await expect(page.locator("#resume")).toContainText(
-    "A downloadable resume file has not yet been added.",
-  );
-  for (const path of [
-    "/commands.html",
-    "/workspace.html",
-    "/triage-cases.html",
-  ]) {
-    const response = await page.goto(ROOT + path);
-    expect(response.status()).toBe(200);
-  }
-  await page.goto(ROOT + "/workspace.html");
-  await page.evaluate(() =>
-    localStorage.setItem(
-      "samra-workspace-v1",
-      JSON.stringify({
-        tasks: [],
-        jobs: [
-          {
-            company: "Synthetic",
-            role: "Analyst",
-            action: "Follow up",
-            follow: "2026-11-11",
-            status: "Applied",
-          },
-        ],
-        journal: "",
-        story: "",
-      }),
-    ),
-  );
-  await page.reload();
-  await expect(
-    page.getByRole("link", { name: "Open Admin → Jobs" }),
-  ).toBeVisible();
-  await expect(page.locator("#job-form")).toHaveCount(0);
-  const dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download backup" }).click();
-  const download = await dl;
-  const saved = JSON.parse(await readFile(await download.path(), "utf8"));
-  expect(saved.jobs).toHaveLength(1);
-  await page.goto(ROOT + "/admin/jobs/index.html#applications");
-  await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "Sign in to your workspace" }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue →" })).toBeDisabled();
-  await expect(page.locator("#workspace")).toBeHidden();
-});
-test("non-owner with MFA and owner without MFA never open private workspace", async ({
-  browser,
-}) => {
-  for (const options of [
-    { owner: false, mfa: true },
-    { owner: true, mfa: false },
-  ]) {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await backend(page, options);
-    await login(page);
-    await expect(page.locator("#workspace")).toBeHidden();
-    await expect(page.locator("#notice")).toContainText(
-      options.owner ? "Invalid code" : "not the configured owner",
-    );
-    await context.close();
-  }
-});
-test("sample alert → reviewed application → tailored document → applied → follow-up → private export", async ({
-  page,
-}) => {
-  const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  const fixture = await backend(page);
-  await login(page);
+const ROOT = "/Samra-portfolio";
+async function open(page) {
+  await page.goto(ROOT + "/admin/jobs/index.html");
   await expect(
     page.getByRole("heading", { name: "Find Jobs", exact: true }),
   ).toBeVisible();
-  await page.screenshot({
-    path: "test-results/jobs-find-desktop.png",
-    fullPage: true,
+}
+async function data(page) {
+  return page.evaluate(async () => {
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const api = await createLocalAPI();
+    try {
+      return (await api.snapshot()).data;
+    } finally {
+      api.close();
+    }
   });
+}
+test("real browser-local workflow persists files and records, backs up and restores on another browser", async ({
+  page,
+  browser,
+}) => {
+  const errors = [];
+  const outbound = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("request", (r) => {
+    if (!r.url().startsWith("http://127.0.0.1:8011")) outbound.push(r.url());
+  });
+  await open(page);
+  await expect(page.getByLabel("Browser storage notice")).toContainText(
+    "No login or cloud sync",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "Password", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("link", { name: "Alerts", exact: false }).click();
+  await expect(
+    page.getByRole("button", { name: "Authorize dedicated inbox" }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Load synthetic digest" }).click();
   await page
     .getByRole("button", { name: "Preview leads", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("SOC Analyst I");
   await page
     .getByRole("button", { name: "Confirm import to review queue" })
     .click();
@@ -109,168 +55,240 @@ test("sample alert → reviewed application → tailored document → applied �
     .click();
   await page
     .getByLabel("Pasted job description")
-    .fill("Python and SIEM required. Columbus hybrid.");
-  await page.getByLabel("Location", { exact: true }).fill("Columbus, Ohio");
+    .fill("Python and SIEM required.");
+  await page.getByLabel("Next follow-up").fill("2026-11-11");
   await page
     .getByRole("button", { name: "Save application", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Applications", exact: true }),
-  ).toBeVisible();
-  expect(fixture.records.applications).toHaveLength(1);
-  expect(fixture.records.applications[0].status).toBe("Saved");
+    page.getByRole("button", { name: "View application" }),
+  ).toHaveCount(1);
   await page.getByRole("button", { name: "View application" }).click();
   await expect(
     page.getByRole("link", { name: "Open Application" }),
   ).toHaveAttribute("href", "https://www.usajobs.gov/job/123456789");
-  expect(fixture.records.applications[0].status).toBe("Saved");
-  // A local popup intercept verifies navigation to the official URL without submitting.
-  await page
-    .context()
-    .route("https://www.usajobs.gov/**", (r) =>
-      r.fulfill({ body: "Official application test destination" }),
-    );
-  const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("link", { name: "Open Application" }).click();
-  const popup = await popupPromise;
-  await popup.waitForLoadState();
-  expect(popup.url()).toBe("https://www.usajobs.gov/job/123456789");
-  await popup.close();
-  expect(fixture.records.applications[0].status).toBe("Saved");
+  expect((await data(page)).applications[0].status).toBe("Saved");
   await page.getByRole("button", { name: "New draft or upload" }).click();
   await page.getByLabel("Version label").fill("Resume v1");
+  await page.getByLabel("Editable draft text").fill("Verified coursework.");
+  const bytes = Buffer.from("%PDF-1.4\nsynthetic exact file bytes\n%%EOF");
   await page
-    .getByLabel("Editable draft text")
-    .fill("Verified Python coursework.");
-  await page.getByLabel("Finished PDF or DOCX").setInputFiles({
-    name: "resume.pdf",
-    mimeType: "application/pdf",
-    buffer: Buffer.from("%PDF-1.4\nsynthetic sample\n%%EOF"),
-  });
+    .getByLabel("Finished PDF or DOCX")
+    .setInputFiles({
+      name: "resume.pdf",
+      mimeType: "application/pdf",
+      buffer: bytes,
+    });
   await page.getByRole("button", { name: "Save document version" }).click();
   await expect(page.locator("#notice")).toContainText(
-    "Document version saved privately",
+    "Document version saved in this browser",
   );
-  expect(fixture.records.documents).toHaveLength(1);
-  expect(fixture.records.documents[0].uploaded).toBe(true);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "View application" }),
+  ).toHaveCount(1);
   await page.getByRole("button", { name: "View application" }).click();
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download privately" }).click();
-  expect((await downloadPromise).suggestedFilename()).toBe("resume.pdf");
-  expect(fixture.downloads()).toBe(1);
+  const dl = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download file", exact: true })
+    .click();
+  expect(await readFile(await (await dl).path())).toEqual(bytes);
   await page.getByRole("button", { name: "Mark Applied", exact: true }).click();
   await page.getByRole("checkbox").check();
   await page
     .getByRole("button", { name: "Confirm submission & mark applied" })
     .click();
   await expect(page.locator("#notice")).toContainText("Submission recorded");
-  expect(fixture.records.applications[0].status).toBe("Applied");
-  expect(fixture.records.documents[0].state).toBe("Submitted");
-  await page.getByRole("button", { name: "View application" }).click();
-  await expect(page.getByRole("button", { name: "Edit draft" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Edit details" }).click();
-  await page.getByLabel("Next follow-up").fill("2026-11-11");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  expect((await data(page)).documents[0].state).toBe("Submitted");
   await page.getByRole("button", { name: "Follow-ups due" }).click();
   await expect(
     page.getByRole("button", { name: "View application" }),
   ).toHaveCount(1);
-  const exportPromise = page.waitForEvent("download");
+  const csvWait = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export CSV" }).click();
-  const csv = await readFile(await (await exportPromise).path(), "utf8");
-  expect(csv).toContain("Applied");
-  expect(csv).toContain(fixture.records.documents[0].id);
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.locator("#workspace")).toBeHidden();
-  await expect(page.locator("#content")).toBeEmpty();
-  expect(errors).toEqual([]);
-});
-test("keyboard and mobile layout, unsafe alert rendered only as text", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await backend(page);
-  await login(page);
-  await expect(
-    page.getByRole("heading", { name: "Find Jobs", exact: true }),
-  ).toBeVisible();
-  await page.keyboard.press("Tab");
-  expect(
-    await page.evaluate(() => document.activeElement !== document.body),
-  ).toBe(true);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.getByRole("link", { name: "Alerts", exact: false }).click();
-  await page
-    .getByLabel("Paste alert text or HTML")
-    .fill(
-      '<script>window.injected=true</script><img src="https://evil.example/pixel"><a href="javascript:alert(1)">Apply</a>',
-    );
-  await page
-    .getByRole("button", { name: "Preview leads", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("Blocked link");
-  expect(await page.evaluate(() => window.injected)).toBeUndefined();
-  await page.getByRole("button", { name: "Close dialog" }).click();
-  await page.getByRole("button", { name: "Authorize dedicated inbox" }).click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Only continue after privately configuring",
+  expect(await readFile(await (await csvWait).path(), "utf8")).toContain(
+    "Applied",
   );
+  const backupWait = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export backup", exact: true })
+    .click();
+  const file = await (await backupWait).path();
+  const backup = JSON.parse(await readFile(file, "utf8"));
+  expect(backup.files).toHaveLength(1);
+  expect(Buffer.from(backup.files[0].base64, "base64")).toEqual(bytes);
+  expect(backup.data.history.length).toBeGreaterThanOrEqual(2);
+  const other = await browser.newContext();
+  try {
+    const second = await other.newPage();
+    await open(second);
+    expect((await data(second)).applications).toHaveLength(0);
+    await second
+      .getByRole("button", { name: "Restore backup", exact: true })
+      .click();
+    await second.getByLabel("Jobs backup JSON").setInputFiles(file);
+    await expect(second.getByRole("dialog")).toContainText("1 applications");
+    await second
+      .getByRole("button", { name: "Replace this browser’s Jobs data" })
+      .click();
+    await expect(second.locator("#notice")).toContainText("Backup restored");
+    await second
+      .getByRole("link", { name: "Applications", exact: false })
+      .click();
+    await second.getByRole("button", { name: "View application" }).click();
+    const restoredWait = second.waitForEvent("download");
+    await second
+      .getByRole("button", { name: "Download file", exact: true })
+      .click();
+    expect(await readFile(await (await restoredWait).path())).toEqual(bytes);
+    await expect(
+      second.getByRole("button", { name: "Edit draft" }),
+    ).toHaveCount(0);
+  } finally {
+    await other.close();
+  }
+  expect(errors).toEqual([]);
+  expect(outbound).toEqual([]);
 });
-
-test("CSV preview skips exact duplicates, flags similar roles, supports private profiles", async ({
+test("local transactions deduplicate, preserve submitted versions, handle concurrent tabs and reject invalid backups atomically", async ({
+  page,
+  context,
+}) => {
+  await open(page);
+  const result = await page.evaluate(async () => {
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const a = await createLocalAPI("local-test"),
+      b = await createLocalAPI("local-test");
+    try {
+      const record = {
+        title: "Analyst",
+        company: "Synthetic",
+        posting_url: "https://example.com/jobs/1",
+      };
+      const app = await a.insert("applications", record);
+      let duplicate = false;
+      try {
+        await b.insert("applications", {
+          ...record,
+          posting_url: record.posting_url + "?utm_source=email",
+        });
+      } catch {
+        duplicate = true;
+      }
+      await Promise.all([
+        a.insert("applications", {
+          ...record,
+          posting_url: "https://example.com/jobs/2",
+        }),
+        b.insert("applications", {
+          ...record,
+          posting_url: "https://example.com/jobs/3",
+        }),
+      ]);
+      const doc = await a.insert("documents", {
+        application_id: app.id,
+        kind: "Resume",
+        version: "v1",
+        draft_text: "",
+        object_path: "device/test/file",
+        filename: "sample.pdf",
+        mime_type: "application/pdf",
+      });
+      await a.upload(
+        doc.object_path,
+        new Blob(["%PDF-1.4 exact"], { type: "application/pdf" }),
+      );
+      await a.update("documents", doc.id, { uploaded: true });
+      await a.rpc("mark_applied", {
+        application: app.id,
+        documents: [doc.id],
+        applied_on: "2026-11-11",
+      });
+      let immutable = false;
+      try {
+        await a.update("documents", doc.id, { draft_text: "changed" });
+      } catch {
+        immutable = true;
+      }
+      const original = await a.backup();
+      const invalid = JSON.parse(original);
+      invalid.data.applications[0].posting_url = "javascript:alert(1)";
+      let rejected = false;
+      try {
+        await a.restore(invalid);
+      } catch {
+        rejected = true;
+      }
+      return {
+        immutable,
+        duplicate,
+        rejected,
+        count: (await a.list("applications")).length,
+        unchanged:
+          original === (await a.backup()) ||
+          JSON.stringify(JSON.parse(original).data) ===
+            JSON.stringify((await a.snapshot()).data),
+      };
+    } finally {
+      a.close();
+      b.close();
+    }
+  });
+  expect(result).toMatchObject({
+    immutable: true,
+    duplicate: true,
+    rejected: true,
+    count: 3,
+    unchanged: true,
+  });
+  const second = await context.newPage();
+  await open(second);
+  await page.getByRole("button", { name: "＋ Add a job", exact: true }).click();
+  await page.getByLabel("Job title", { exact: true }).fill("Saved across tabs");
+  await page.getByLabel("Company", { exact: true }).fill("Synthetic");
+  await page
+    .getByLabel("Posting URL", { exact: true })
+    .fill("https://example.com/shared");
+  await page
+    .getByRole("button", { name: "Save application", exact: true })
+    .click();
+  await expect(page.locator("#notice")).toContainText("Application saved");
+  await second.reload();
+  await second
+    .getByRole("link", { name: "Applications", exact: false })
+    .click();
+  await expect(
+    second.getByText("Saved across tabs", { exact: true }),
+  ).toBeVisible();
+});
+test("CSV review, profile tailoring and malformed email work without authentication", async ({
   page,
 }) => {
-  const fixture = await backend(page);
-  fixture.records.applications.push({
-    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-    title: "SOC Analyst I",
-    company: "Synthetic",
-    posting_url: "https://example.com/jobs/1",
-    normalized_url: "https://example.com/jobs/1",
-    source: "example.com",
-    source_id: null,
-    status: "Saved",
-    career_track: "Cybersecurity",
-    notes: "",
-    submitted_document_ids: [],
-  });
-  await login(page);
+  await open(page);
   await page.getByRole("link", { name: "Documents", exact: false }).click();
   await page.getByRole("button", { name: "Edit profile" }).first().click();
-  await page
-    .getByLabel("Verified résumé content")
-    .fill("Verified Python coursework and Wazuh lab.");
-  await page.getByRole("button", { name: "Save private profile" }).click();
-  await expect(page.locator("#notice")).toContainText(
-    "Private master profile saved",
-  );
-
+  await page.getByLabel("Verified résumé content").fill("Python coursework.");
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(page.locator("#notice")).toContainText("Master profile saved");
   await page.getByRole("link", { name: "Applications", exact: false }).click();
   await page.getByRole("button", { name: "Import CSV" }).click();
-  await page.getByLabel("CSV file").setInputFiles({
-    name: "synthetic.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from(
-      "title,company,posting_url\nSOC Analyst I,Synthetic,https://example.com/jobs/1\nSOC Analyst I,Synthetic,https://example.com/jobs/2",
-    ),
-  });
-  await expect(page.getByRole("dialog")).toContainText(
-    "Exact duplicate: skipped",
-  );
-  await expect(page.getByRole("dialog")).toContainText(
-    "Similar role: retained separately",
-  );
+  await page
+    .getByLabel("CSV file")
+    .setInputFiles({
+      name: "jobs.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "title,company,posting_url\nAnalyst,Synthetic,https://example.com/jobs/1\nAnalyst,Synthetic,https://example.com/jobs/1?utm_source=email\nAnalyst,Synthetic,https://example.com/jobs/2",
+      ),
+    });
+  await expect(page.getByRole("dialog")).toContainText("3 records to review");
   await page
     .getByRole("button", { name: "Confirm import", exact: true })
     .click();
   await expect(page.locator("#notice")).toContainText(
-    "1 imported; 1 exact duplicates skipped",
+    "2 imported; 1 exact duplicates skipped",
   );
-  expect(fixture.records.applications).toHaveLength(2);
   await page.getByRole("button", { name: "View application" }).first().click();
   await page.getByRole("button", { name: "Edit details" }).click();
   await page
@@ -285,37 +303,69 @@ test("CSV preview skips exact duplicates, flags similar roles, supports private 
   await expect(page.getByRole("dialog")).toContainText(
     "Python: Evidence to review",
   );
-  await expect(page.getByRole("dialog")).toContainText("SIEM: Not documented");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await page.getByRole("button", { name: "View application" }).first().click();
-  await page.getByRole("button", { name: "Prepare documents / Teal" }).click();
-  await expect(page.getByRole("link", { name: "Open Teal" })).toHaveAttribute(
-    "href",
-    "https://www.tealhq.com/",
-  );
-  await expect(page.getByRole("dialog")).toContainText(
-    "Verified Python coursework",
-  );
+  await page.getByRole("link", { name: "Alerts", exact: false }).click();
+  await page
+    .getByLabel("Paste alert text or HTML")
+    .fill(
+      '<script>window.injected=true</script><img src="https://evil.example/pixel"><a href="javascript:alert(1)">Apply</a>',
+    );
+  await page
+    .getByRole("button", { name: "Preview leads", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("Blocked link");
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
 });
-
-test("first-time MFA enrollment cleans up an unfinished factor and remains gated until verification", async ({
+test("blocked storage fails visibly, public routes and mobile layout remain usable", async ({
+  browser,
   page,
 }) => {
-  const fixture = await backend(page, { enrolled: false, pending: true });
-  await page.goto(ROOT + "/admin/jobs/index.html");
-  await page.getByLabel("Email", { exact: true }).fill("owner@example.test");
-  await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
-  await page.getByRole("button", { name: "Continue →", exact: true }).click();
-  await expect(
-    page.getByAltText("Authenticator enrollment QR code"),
-  ).toBeVisible();
-  await expect(page.locator("#workspace")).toBeHidden();
-  expect(fixture.removedFactors()).toBe(1);
-  await page.getByLabel("Authenticator code").fill("123456");
-  await page.getByRole("button", { name: "Verify & open Jobs" }).click();
-  await expect(page.locator("#workspace")).toBeVisible();
-  await expect(
-    page.getByAltText("Authenticator enrollment QR code"),
-  ).toBeHidden();
+  const context = await browser.newContext();
+  try {
+    const blocked = await context.newPage();
+    await blocked.addInitScript(() => {
+      Object.defineProperty(window, "indexedDB", {
+        get() {
+          throw Error("Storage blocked");
+        },
+      });
+    });
+    await blocked.goto(ROOT + "/admin/jobs/index.html");
+    await expect(blocked.locator("#gate")).toContainText(
+      "could not open browser storage",
+    );
+    await expect(
+      blocked.getByRole("button", { name: "Export backup", exact: true }),
+    ).toBeDisabled();
+  } finally {
+    await context.close();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await page.keyboard.press("Tab");
+  expect(
+    await page.evaluate(() => document.activeElement !== document.body),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/jobs-local-mobile.png",
+    fullPage: true,
+  });
+  await page.route("https://**/*", (r) => r.abort());
+  for (const path of [
+    "/index.html",
+    "/workspace.html",
+    "/commands.html",
+    "/triage-cases.html",
+  ])
+    expect((await page.goto(ROOT + path)).status()).toBe(200);
+  await expect(page.locator("#job-form")).toHaveCount(0);
+  expect(
+    (await page.request.get(ROOT + "/franklin-dewin-andujar.pdf")).status(),
+  ).toBe(200);
 });

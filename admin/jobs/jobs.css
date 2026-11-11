@@ -689,3 +689,13 @@ iframe.preview {
     scroll-behavior: auto !important;
   }
 }
+.local-notice {
+  margin-bottom: 26px;
+}
+.local-notice p {
+  margin-top: 6px;
+}
+.header-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

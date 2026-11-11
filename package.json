@@ -1,7 +1,7 @@
 {
   "name": "samra-portfolio",
   "version": "1.0.0",
-  "description": "Public portfolio and owner-only Jobs workspace",
+  "description": "Public portfolio and browser-local Jobs workspace",
   "scripts": {
     "build": "esbuild admin/jobs/src/app.js --bundle --format=esm --minify --outfile=admin/jobs/dist/app.js",
     "test": "node --test tests/core.test.js tests/policies.test.js tests/inbox.test.js",
@@ -22,9 +22,6 @@
   },
   "homepage": "https://github.com/CyberSamliya/Samra-portfolio#readme",
   "private": true,
-  "dependencies": {
-    "@supabase/supabase-js": "2.95.3"
-  },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
     "@playwright/test": "1.58.2",
