@@ -648,11 +648,9 @@ test("résumé library stores independent PDF/DOCX/ZIP originals, deduplicates p
   let snapshot = await data(page);
   expect(snapshot.applications).toHaveLength(0);
   expect(snapshot.documents.filter((d) => d.library)).toHaveLength(3);
-  const row = page
-    .locator(".document")
-    .filter({
-      has: page.getByRole("heading", { name: "library.pdf", exact: true }),
-    });
+  const row = page.locator(".document").filter({
+    has: page.getByRole("heading", { name: "library.pdf", exact: true }),
+  });
   const dl = page.waitForEvent("download");
   await row.getByRole("button", { name: "Download file", exact: true }).click();
   expect(await readFile(await (await dl).path())).toEqual(pdf);
@@ -684,13 +682,11 @@ test("résumé library stores independent PDF/DOCX/ZIP originals, deduplicates p
   await page
     .getByRole("button", { name: "Upload résumés", exact: true })
     .click();
-  await page
-    .getByLabel("Résumé files or import package")
-    .setInputFiles({
-      name: "import.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(pack)),
-    });
+  await page.getByLabel("Résumé files or import package").setInputFiles({
+    name: "import.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(pack)),
+  });
   await expect(page.getByRole("dialog")).toContainText(
     "Exact duplicate: skipped",
   );
@@ -766,29 +762,185 @@ test("résumé package integrity failures preserve the existing vault", async ({
   await page
     .getByRole("button", { name: "Upload résumés", exact: true })
     .click();
-  await page
-    .getByLabel("Résumé files or import package")
-    .setInputFiles({
-      name: "corrupt.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
-          format: "samra-resume-library",
-          version: 1,
-          files: [
-            {
-              name: "corrupt.pdf",
-              sha256: "0".repeat(64),
-              base64: Buffer.from("%PDF-1.4 wrong hash").toString("base64"),
-            },
-          ],
-        }),
-      ),
-    });
+  await page.getByLabel("Résumé files or import package").setInputFiles({
+    name: "corrupt.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "samra-resume-library",
+        version: 1,
+        files: [
+          {
+            name: "corrupt.pdf",
+            sha256: "0".repeat(64),
+            base64: Buffer.from("%PDF-1.4 wrong hash").toString("base64"),
+          },
+        ],
+      }),
+    ),
+  });
   await expect(page.getByRole("dialog")).toContainText(
     "Import integrity check failed",
   );
   await page.getByRole("button", { name: "Save résumés to vault" }).click();
   await expect(page.getByRole("dialog")).toContainText("Choose and review");
   expect((await data(page)).documents).toHaveLength(0);
+});
+
+test("recommendation letters import separately, retain exact originals, copy to applications and back up", async ({
+  page,
+}) => {
+  await open(page);
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  const { createHash } = await import("node:crypto");
+  const files = Array.from({ length: 4 }, (_, i) => ({
+    name: "Recommendation " + (i + 1) + ".pdf",
+    buffer: Buffer.from("%PDF-1.4 synthetic recommendation " + i + "\n%%EOF"),
+  }));
+  const pack = {
+    format: "samra-recommendation-library",
+    version: 1,
+    files: files.map((f) => ({
+      name: f.name,
+      sha256: createHash("sha256").update(f.buffer).digest("hex"),
+      base64: f.buffer.toString("base64"),
+    })),
+  };
+  // Identical bytes in the résumé section must not hide a recommendation letter.
+  await page
+    .getByRole("button", { name: "Upload résumés", exact: true })
+    .click();
+  await page
+    .getByLabel("Résumé files or import package")
+    .setInputFiles({
+      name: "same.pdf",
+      mimeType: "application/pdf",
+      buffer: files[0].buffer,
+    });
+  await page.getByRole("button", { name: "Save résumés to vault" }).click();
+  await expect(page.locator("#notice")).toContainText("1 résumé files saved");
+  async function importLetters() {
+    await page
+      .getByRole("button", {
+        name: "Upload recommendation letters",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByLabel("Recommendation letter files or import package")
+      .setInputFiles({
+        name: "letters.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(pack)),
+      });
+    await expect(page.getByRole("dialog")).toContainText(
+      "4 files ready to save",
+    );
+    await page.getByRole("button", { name: "Save letters to vault" }).click();
+  }
+  await importLetters();
+  await expect(page.locator("#notice")).toContainText(
+    "4 recommendation letters saved",
+  );
+  const letterSection = page
+    .locator(".card")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Recommendation letters",
+        exact: true,
+      }),
+    });
+  const resumeSection = page
+    .locator(".card")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Résumé file library",
+        exact: true,
+      }),
+    });
+  await expect(letterSection.locator(".document")).toHaveCount(4);
+  await expect(resumeSection.locator(".document")).toHaveCount(1);
+  const row = letterSection
+    .locator(".document")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Recommendation 1.pdf",
+        exact: true,
+      }),
+    });
+  const dl = page.waitForEvent("download");
+  await row.getByRole("button", { name: "Download file", exact: true }).click();
+  expect(await readFile(await (await dl).path())).toEqual(files[0].buffer);
+  await row.getByRole("button", { name: "Preview file", exact: true }).click();
+  await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute(
+    "src",
+    /^blob:/,
+  );
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await importLetters();
+  await expect(page.locator("#notice")).toContainText(
+    "0 recommendation letters saved; 4 exact duplicates skipped",
+  );
+  await page.evaluate(async (password) => {
+    const { unlockVault } =
+      await import("/Samra-portfolio/admin/jobs/src/vault.js");
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const codec = await unlockVault(password),
+      api = await createLocalAPI(undefined, codec);
+    try {
+      await api.insert("applications", {
+        title: "Synthetic role",
+        company: "Example",
+        posting_url: "https://example.com/letter-job",
+      });
+    } finally {
+      api.close();
+      codec.close();
+    }
+  }, PASSWORD);
+  await page.reload();
+  await enter(page);
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  await row.getByRole("button", { name: "Use for an application" }).click();
+  await page.getByRole("button", { name: "Attach letter version" }).click();
+  await expect(page.locator("#notice")).toContainText(
+    "Recommendation letter attached",
+  );
+  const snapshot = await data(page);
+  expect(
+    snapshot.documents.filter(
+      (d) => d.library && d.library_category === "Recommendation letter",
+    ),
+  ).toHaveLength(4);
+  const copy = snapshot.documents.find((d) => !d.library);
+  expect(copy.kind).toBe("Recommendation letter");
+  expect(copy.hash).toBe(pack.files[0].sha256);
+  await expect(
+    page.getByRole("button", { name: "Edit draft", exact: true }),
+  ).toHaveCount(0);
+  const backupWait = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export backup", exact: true })
+    .click();
+  const exported = JSON.parse(
+    await readFile(await (await backupWait).path(), "utf8"),
+  );
+  const summary = await page.evaluate(
+    async ({ exported, password }) => {
+      const { decryptBackup } =
+        await import("/Samra-portfolio/admin/jobs/src/vault.js");
+      const { validateBackup } =
+        await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+      const prepared = validateBackup(await decryptBackup(exported, password));
+      return {
+        letters: prepared.data.documents.filter(
+          (d) => d.library_category === "Recommendation letter" && d.library,
+        ).length,
+        files: prepared.files.length,
+      };
+    },
+    { exported, password: PASSWORD },
+  );
+  expect(summary).toEqual({ letters: 4, files: 6 });
 });

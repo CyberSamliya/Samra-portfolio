@@ -1,4 +1,8 @@
-import { prepareResume, readResumePackage } from "./resume-library.js";
+import {
+  prepareResume,
+  readResumePackage,
+  readRecommendationPackage,
+} from "./resume-library.js";
 import {
   inspectVault,
   setupVault,
@@ -851,32 +855,48 @@ function handoff(app) {
 }
 function documentsView() {
   const section = div("stack");
-  const library = div(
-    "card",
-    div(
-      "section-top",
+  for (const category of ["Resume", "Recommendation letter"]) {
+    const letters = category === "Recommendation letter";
+    const library = div(
+      "card",
       div(
-        "",
-        node("h2", "Résumé file library"),
-        node(
-          "p",
-          "Keep master résumés here without creating a job application. Files are encrypted in your vault.",
-          "fine",
+        "section-top",
+        div(
+          "",
+          node(
+            "h2",
+            letters ? "Recommendation letters" : "Résumé file library",
+          ),
+          node(
+            "p",
+            letters
+              ? "Keep original recommendation letters in your encrypted vault."
+              : "Keep master résumés here without creating a job application. Files are encrypted in your vault.",
+            "fine",
+          ),
+        ),
+        button(
+          letters ? "Upload recommendation letters" : "Upload résumés",
+          () => uploadResumes(category),
+          false,
         ),
       ),
-      button("Upload résumés", uploadResumes, false),
-    ),
-  );
-  const saved = state.documents.filter((d) => d.library);
-  if (!saved.length)
-    library.append(
-      empty(
-        "Add your résumé files",
-        "Upload PDF, DOCX or ZIP files, or import your prepared résumé package.",
-      ),
     );
-  saved.forEach((d) => library.append(documentRow(d)));
-  section.append(library);
+    const saved = state.documents.filter(
+      (d) => d.library && (d.library_category || "Resume") === category,
+    );
+    if (!saved.length)
+      library.append(
+        empty(
+          letters ? "Add your recommendation letters" : "Add your résumé files",
+          letters
+            ? "Upload PDF or DOCX letters, or import your prepared letter package."
+            : "Upload PDF, DOCX or ZIP files, or import your prepared résumé package.",
+        ),
+      );
+    saved.forEach((d) => library.append(documentRow(d)));
+    section.append(library);
+  }
   const profiles = div(
     "card",
     div(
@@ -989,7 +1009,11 @@ function documentRow(doc) {
     ),
   );
   const actions = div("row");
-  if (doc.state === "Draft" && !doc.library)
+  if (
+    doc.state === "Draft" &&
+    !doc.library &&
+    doc.kind !== "Recommendation letter"
+  )
     actions.append(
       button("Edit draft", () =>
         documentEditor(
@@ -1038,7 +1062,9 @@ function documentRow(doc) {
     actions.append(
       button("Use for an application", () => {
         if (!state.apps.length)
-          throw Error("Save a job application first, then choose this résumé.");
+          throw Error(
+            "Save a job application first, then choose this document.",
+          );
         const f = node("form");
         f.append(
           field(
@@ -1056,28 +1082,51 @@ function documentRow(doc) {
             "fine",
           ),
         );
-        formSubmit(f, "Attach résumé version", async (values) => {
-          await api.copyResume(doc.id, values.application);
-          await refresh();
-          $("editor").close();
-          render();
-          say(
-            "Résumé attached to the application. The library original is unchanged.",
-          );
-        });
-        modal("Use saved résumé", f);
+        formSubmit(
+          f,
+          doc.library_category === "Recommendation letter"
+            ? "Attach letter version"
+            : "Attach résumé version",
+          async (values) => {
+            await api.copyResume(doc.id, values.application);
+            await refresh();
+            $("editor").close();
+            render();
+            say(
+              doc.library_category === "Recommendation letter"
+                ? "Recommendation letter attached to the application. The original is unchanged."
+                : "Résumé attached to the application. The library original is unchanged.",
+            );
+          },
+        );
+        modal(
+          doc.library_category === "Recommendation letter"
+            ? "Use saved recommendation letter"
+            : "Use saved résumé",
+          f,
+        );
       }),
     );
   row.append(actions);
   return row;
 }
-function uploadResumes() {
+function uploadResumes(category = "Resume") {
+  const letters = category === "Recommendation letter";
   const f = node("form");
   const input = required(
-    field("Résumé files or import package", "resumes", "", "file"),
+    field(
+      letters
+        ? "Recommendation letter files or import package"
+        : "Résumé files or import package",
+      "resumes",
+      "",
+      "file",
+    ),
   );
   input.lastChild.multiple = true;
-  input.lastChild.accept = ".pdf,.docx,.zip,.json";
+  input.lastChild.accept = letters
+    ? ".pdf,.docx,.json"
+    : ".pdf,.docx,.zip,.json";
   const preview = node("div");
   let prepared = [];
   input.lastChild.onchange = act(async (e) => {
@@ -1090,10 +1139,14 @@ function uploadResumes() {
       if (file.name.toLowerCase().endsWith(".json")) {
         if (file.size > 16000000) throw Error("Import package exceeds 16 MB.");
         pending.push(
-          ...(await readResumePackage(JSON.parse(await file.text()))),
+          ...(await (letters ? readRecommendationPackage : readResumePackage)(
+            JSON.parse(await file.text()),
+          )),
         );
       } else pending.push(await prepareResume(file, file.name));
     }
+    if (letters && pending.some((f) => f.mime_type === "application/zip"))
+      throw Error("Recommendation letters must be PDF or DOCX files.");
     if (pending.length > 100)
       throw Error("Import at most 100 résumé files per batch.");
     prepared = pending;
@@ -1106,7 +1159,12 @@ function uploadResumes() {
             " · " +
             Math.ceil(item.size / 1024) +
             " KB" +
-            (state.documents.some((d) => d.library && d.hash === item.hash)
+            (state.documents.some(
+              (d) =>
+                d.library &&
+                (d.library_category || "Resume") === category &&
+                d.hash === item.hash,
+            )
               ? " · Exact duplicate: skipped"
               : ""),
           "fine",
@@ -1118,25 +1176,32 @@ function uploadResumes() {
     preview,
     node(
       "p",
-      "Files stay encrypted in this browser. Exact duplicate contents are skipped. ZIP archives are retained as files; extract their PDFs yourself or use the prepared import package. This adds to your library without replacing existing records.",
+      letters
+        ? "Letters stay encrypted in this browser. Exact duplicates are skipped. Original letter contents are preserved; this adds to your letter library without replacing existing records."
+        : "Files stay encrypted in this browser. Exact duplicate contents are skipped. ZIP archives are retained as files; extract their PDFs yourself or use the prepared import package. This adds to your library without replacing existing records.",
       "fine",
     ),
   );
-  formSubmit(f, "Save résumés to vault", async () => {
-    if (!prepared.length)
-      throw Error("Choose and review your résumé files first.");
-    const result = await api.importResumes(prepared);
-    await refresh();
-    $("editor").close();
-    render();
-    say(
-      result.added +
-        " résumé files saved; " +
-        result.skipped +
-        " exact duplicates skipped. Export an encrypted backup to preserve them.",
-    );
-  });
-  modal("Upload résumés", f);
+  formSubmit(
+    f,
+    letters ? "Save letters to vault" : "Save résumés to vault",
+    async () => {
+      if (!prepared.length) throw Error("Choose and review your files first.");
+      const result = await api.importResumes(prepared, category);
+      await refresh();
+      $("editor").close();
+      render();
+      say(
+        result.added +
+          (letters
+            ? " recommendation letters saved; "
+            : " résumé files saved; ") +
+          result.skipped +
+          " exact duplicates skipped. Export an encrypted backup to preserve them.",
+      );
+    },
+  );
+  modal(letters ? "Upload recommendation letters" : "Upload résumés", f);
 }
 function documentEditor(app, doc = {}) {
   if (!app) throw Error("Choose an application first.");

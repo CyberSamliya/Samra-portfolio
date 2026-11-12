@@ -10,9 +10,9 @@ export async function prepareResume(blob, filename, expectedHash) {
     filename.length > 250 ||
     /[\\/\x00-\x1f]/.test(filename)
   )
-    throw Error("Use a valid résumé filename.");
+    throw Error("Use a valid document filename.");
   if (!(blob instanceof Blob) || !blob.size || blob.size > 8388608)
-    throw Error("Each résumé must be between 1 byte and 8 MB.");
+    throw Error("Each file must be between 1 byte and 8 MB.");
   const ext = filename.split(".").pop().toLowerCase();
   const mime_type =
     ext === "pdf"
@@ -43,30 +43,37 @@ export async function prepareResume(blob, filename, expectedHash) {
     size: bytes.length,
   };
 }
-export async function readResumePackage(value) {
+export async function readResumePackage(
+  value,
+  expectedFormat = "samra-resume-library",
+) {
   if (
-    value?.format !== "samra-resume-library" ||
+    value?.format !== expectedFormat ||
     value.version !== 1 ||
     !Array.isArray(value.files) ||
     !value.files.length ||
     value.files.length > 100
   )
-    throw Error("Choose a supported résumé import file.");
+    throw Error("Choose a supported document import file.");
   return Promise.all(
     value.files.map(async (f) => {
       if (
         typeof f.base64 !== "string" ||
         f.base64.length > 11200000 ||
-        typeof f.sha256 !== "string"
+        typeof f.sha256 !== "string" ||
+        !/^[0-9a-f]{64}$/.test(f.sha256)
       )
-        throw Error("Invalid résumé import file.");
+        throw Error("Invalid document import file.");
       let bytes;
       try {
         bytes = Uint8Array.from(atob(f.base64), (c) => c.charCodeAt(0));
       } catch {
-        throw Error("Corrupt résumé import file.");
+        throw Error("Corrupt document import file.");
       }
       return prepareResume(new Blob([bytes]), f.name, f.sha256);
     }),
   );
 }
+
+export const readRecommendationPackage = (value) =>
+  readResumePackage(value, "samra-recommendation-library");

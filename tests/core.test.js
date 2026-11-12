@@ -127,3 +127,33 @@ test("fit assessment reports evidence to review, never invents experience", () =
   ]);
   assert.deepEqual(assessFit("No recognized skill keywords", ""), []);
 });
+
+test("document import packages require valid checksums and the correct library type", async () => {
+  const { readResumePackage, readRecommendationPackage } =
+    await import("../admin/jobs/src/resume-library.js");
+  const bytes = Buffer.from("%PDF-1.4 synthetic letter");
+  const { createHash } = await import("node:crypto");
+  const file = {
+    name: "letter.pdf",
+    base64: bytes.toString("base64"),
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+  const pack = {
+    format: "samra-recommendation-library",
+    version: 1,
+    files: [file],
+  };
+  assert.equal((await readRecommendationPackage(pack)).length, 1);
+  await assert.rejects(readResumePackage(pack), /supported document import/);
+  await assert.rejects(
+    readRecommendationPackage({ ...pack, files: [{ ...file, sha256: "" }] }),
+    /Invalid document import/,
+  );
+  await assert.rejects(
+    readRecommendationPackage({
+      ...pack,
+      files: [{ ...file, sha256: "0".repeat(64) }],
+    }),
+    /integrity/,
+  );
+});

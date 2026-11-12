@@ -133,3 +133,20 @@ Keep them private and never commit them to Git or publish them with the static
 site. Importing requires the owner to unlock their vault in their browser; the
 assistant cannot directly modify a vault on another browser/device. No attached
 résumé content is embedded in this repository or deployment.
+
+## Recommendation letters
+
+Documents → **Recommendation letters → Upload recommendation letters** saves
+original PDF/DOCX letters in a separate encrypted library. A prepared
+`samra-recommendation-library` JSON package imports multiple letters together,
+with SHA-256 checks for the exact original bytes. Reimporting the same files
+skips duplicates without affecting the résumé library or existing applications.
+Download and PDF preview work after unlocking. **Use for an application** makes
+an independent recommendation-letter version; original letter text is not made
+editable. Letter originals and application copies are included in encrypted
+backups and checked during restoration.
+
+Prepared letter packages are readable import files and must be kept private.
+The browser owner must unlock Jobs and import them; the assistant cannot insert
+files directly into another device's vault. This feature does not remove or
+change any recommendation PDFs already present in the public portfolio checkout.

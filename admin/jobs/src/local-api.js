@@ -180,17 +180,31 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
         if (!doc) throw Error("Document version not found");
         files.add(file, path);
       }),
-    importResumes: async (files) => {
+    importResumes: async (files, category = "Resume") => {
+      if (!["Resume", "Recommendation letter"].includes(category))
+        throw Error("Invalid library category");
       if (!files.length || files.length > 100)
         throw Error("Choose 1–100 files per batch.");
       const prepared = await Promise.all(
         files.map((f) => prepareResume(f.blob, f.filename, f.hash)),
       );
+      if (
+        category === "Recommendation letter" &&
+        prepared.some((f) => f.mime_type === "application/zip")
+      )
+        throw Error("Recommendation letters must be PDF or DOCX files.");
       return transaction("readwrite", (d, store) => {
         let added = 0,
           skipped = 0;
         for (const f of prepared) {
-          if (d.documents.some((doc) => doc.library && doc.hash === f.hash)) {
+          if (
+            d.documents.some(
+              (doc) =>
+                doc.library &&
+                (doc.library_category || "Resume") === category &&
+                doc.hash === f.hash,
+            )
+          ) {
             skipped++;
             continue;
           }
@@ -199,9 +213,14 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
           d.documents.push({
             id,
             library: true,
+            library_category: category,
             application_id: null,
             kind:
-              f.mime_type === "application/zip" ? "Resume archive" : "Resume",
+              category === "Recommendation letter"
+                ? "Recommendation letter"
+                : f.mime_type === "application/zip"
+                  ? "Resume archive"
+                  : "Resume",
             version: f.filename,
             filename: f.filename,
             mime_type: f.mime_type,
@@ -414,6 +433,11 @@ export function validateBackup(backup) {
     validateApplication(a, data);
   }
   for (const doc of data.documents) {
+    if (
+      doc.library_category !== undefined &&
+      !["Resume", "Recommendation letter"].includes(doc.library_category)
+    )
+      throw Error("Invalid library category");
     if (doc.library !== undefined && typeof doc.library !== "boolean")
       throw Error("Invalid library record");
     if (
