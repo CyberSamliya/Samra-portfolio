@@ -676,7 +676,10 @@ function downloadBlob(blob, name) {
   const a = node("a");
   a.href = url;
   a.download = name;
+  a.hidden = true;
+  document.body.append(a);
   a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 async function applicationDetail(app) {
@@ -1023,34 +1026,67 @@ function documentRow(doc) {
       button("Download file", async () => {
         const blob = await api.download(doc.object_path);
         downloadBlob(blob, doc.filename);
-      }),
-      button("Preview file", async () => {
-        if (doc.mime_type !== "application/pdf") {
-          say(
-            "Download this file to open it. In-browser preview is available for PDFs.",
-          );
-          return;
-        }
-        const blob = await api.download(doc.object_path);
-        const url = URL.createObjectURL(
-          new Blob([blob], { type: "application/pdf" }),
+        say(
+          "Download requested for " +
+            doc.filename +
+            ". Check your browser’s Downloads list (Ctrl+J on Windows).",
         );
-        const frame = node("iframe", undefined, "preview");
-        frame.title = "Saved PDF preview";
-        frame.setAttribute("sandbox", "");
-        frame.src = url;
+      }),
+      button("Open file", async () => {
+        const blob = await api.download(doc.object_path);
+        if (!allowed) return;
+        const url = URL.createObjectURL(blob);
+        const download = node("a", "Download original", "button secondary");
+        download.href = url;
+        download.download = doc.filename;
+        const panel = div(
+          "document-preview",
+          node("p", "Loading local document viewer…"),
+        );
+        let cleanup = () => {},
+          closed = false;
         modal(
-          "Document preview",
-          frame,
+          doc.filename,
+          div("row", download),
+          panel,
           node(
             "p",
-            "This preview reads the file stored in this browser. It is not uploaded.",
+            "Preview reads your decrypted browser-local file. No document is sent to a preview service.",
             "fine",
           ),
         );
-        $("editor").addEventListener("close", () => URL.revokeObjectURL(url), {
-          once: true,
-        });
+        $("editor").addEventListener(
+          "close",
+          () => {
+            closed = true;
+            cleanup();
+            URL.revokeObjectURL(url);
+          },
+          { once: true },
+        );
+        if (doc.mime_type === "application/zip") {
+          panel.replaceChildren(
+            node(
+              "p",
+              "ZIP archives need to be downloaded and extracted on your device. Use Download original above.",
+            ),
+          );
+          return;
+        }
+        try {
+          const viewer = await import("./preview.js");
+          if (!closed && allowed)
+            cleanup = viewer.startPreview(blob, doc.filename, panel);
+        } catch {
+          if (!closed)
+            panel.append(
+              node(
+                "p",
+                "Preview could not load. Use Download original above.",
+                "fine",
+              ),
+            );
+        }
       }),
     );
   }

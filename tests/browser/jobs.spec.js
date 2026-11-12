@@ -654,11 +654,10 @@ test("résumé library stores independent PDF/DOCX/ZIP originals, deduplicates p
   const dl = page.waitForEvent("download");
   await row.getByRole("button", { name: "Download file", exact: true }).click();
   expect(await readFile(await (await dl).path())).toEqual(pdf);
-  await row.getByRole("button", { name: "Preview file", exact: true }).click();
-  await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute(
-    "src",
-    /^blob:/,
-  );
+  await row.getByRole("button", { name: "Open file", exact: true }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("link", { name: "Download original" }),
+  ).toHaveAttribute("href", /^blob:/);
   await page.getByRole("button", { name: "Close dialog" }).click();
   // A prepared import package is additive and hashes exact binary contents.
   const { createHash } = await import("node:crypto");
@@ -863,11 +862,10 @@ test("recommendation letters import separately, retain exact originals, copy to 
   const dl = page.waitForEvent("download");
   await row.getByRole("button", { name: "Download file", exact: true }).click();
   expect(await readFile(await (await dl).path())).toEqual(files[0].buffer);
-  await row.getByRole("button", { name: "Preview file", exact: true }).click();
-  await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute(
-    "src",
-    /^blob:/,
-  );
+  await row.getByRole("button", { name: "Open file", exact: true }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("link", { name: "Download original" }),
+  ).toHaveAttribute("href", /^blob:/);
   await page.getByRole("button", { name: "Close dialog" }).click();
   await importLetters();
   await expect(page.locator("#notice")).toContainText(
@@ -967,20 +965,18 @@ test("both import files can be selected together and combined packages sort corr
   await page
     .getByRole("button", { name: "Upload résumés", exact: true })
     .click();
-  await page
-    .getByLabel("Résumé files or import package")
-    .setInputFiles([
-      input("resumes.json", {
-        format: "samra-resume-library",
-        version: 1,
-        files: resumeFiles,
-      }),
-      input("letters.json", {
-        format: "samra-recommendation-library",
-        version: 1,
-        files: letterFiles,
-      }),
-    ]);
+  await page.getByLabel("Résumé files or import package").setInputFiles([
+    input("resumes.json", {
+      format: "samra-resume-library",
+      version: 1,
+      files: resumeFiles,
+    }),
+    input("letters.json", {
+      format: "samra-recommendation-library",
+      version: 1,
+      files: letterFiles,
+    }),
+  ]);
   await expect(page.getByRole("dialog")).toContainText("3 files ready to save");
   await page
     .getByRole("button", { name: "Save all documents to vault" })
@@ -1032,4 +1028,119 @@ test("both import files can be selected together and combined packages sort corr
     ),
   ).toHaveLength(2);
   expect(snapshot.applications).toHaveLength(0);
+});
+
+test("saved PDFs render real pages, DOCX opens as safe text, and original download links preserve bytes", async ({
+  page,
+}) => {
+  const { execFileSync } = await import("node:child_process");
+  const outbound = [];
+  page.on("request", (r) => {
+    if (
+      !r.url().startsWith("http://127.0.0.1:8011") &&
+      !r.url().startsWith("blob:")
+    )
+      outbound.push(r.url());
+  });
+  await open(page);
+  const paths = [
+    "franklin-laurie-crawford.pdf",
+    "franklin-dewin-andujar.pdf",
+    "franklin-tracey-boggs-walsh.pdf",
+    "ptk-recommendation.pdf",
+  ];
+  const uploads = [];
+  for (let i = 0; i < paths.length; i++) {
+    const response = await page.request.get(ROOT + "/" + paths[i]);
+    expect(response.status()).toBe(200);
+    uploads.push({
+      name: "letter-" + i + ".pdf",
+      mimeType: "application/pdf",
+      buffer: await response.body(),
+    });
+  }
+  const docx = execFileSync("python3", [
+    "-c",
+    `import zipfile,io,sys
+b=io.BytesIO()
+with zipfile.ZipFile(b,'w') as z:
+ z.writestr('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+ z.writestr('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+ z.writestr('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>DOCX preview sentinel</w:t></w:r></w:p><w:p><w:r><w:t>&lt;img src=x onerror=window.injected=true&gt;</w:t></w:r></w:p></w:body></w:document>')
+sys.stdout.buffer.write(b.getvalue())`,
+  ]);
+  uploads.push({
+    name: "resume.docx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: docx,
+  });
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  await page
+    .getByRole("button", { name: "Upload résumés", exact: true })
+    .click();
+  await page
+    .getByLabel("Résumé files or import package")
+    .setInputFiles(uploads);
+  await expect(page.getByRole("dialog")).toContainText("5 files ready to save");
+  await page.getByRole("button", { name: "Save résumés to vault" }).click();
+  await expect(page.locator("#notice")).toContainText("5 résumé files saved");
+  for (let i = 0; i < 4; i++) {
+    const row = page.locator(".document").filter({
+      has: page.getByRole("heading", {
+        name: "letter-" + i + ".pdf",
+        exact: true,
+      }),
+    });
+    await row.getByRole("button", { name: "Open file", exact: true }).click();
+    await expect(page.locator(".document-preview [role=status]")).toContainText(
+      "Showing 1 of",
+      { timeout: 15000 },
+    );
+    await expect(
+      page.getByRole("dialog").locator("canvas.pdf-page"),
+    ).toHaveCount(1);
+    expect(
+      await page.locator("canvas.pdf-page").evaluate((c) => {
+        const pixels = c
+          .getContext("2d")
+          .getImageData(0, 0, c.width, c.height).data;
+        let dark = 0;
+        for (let j = 0; j < pixels.length; j += 16)
+          if (pixels[j] < 180 && pixels[j + 1] < 180 && pixels[j + 2] < 180)
+            dark++;
+        return dark;
+      }),
+    ).toBeGreaterThan(100);
+    const dl = page.waitForEvent("download");
+    await page
+      .getByRole("dialog")
+      .getByRole("link", { name: "Download original", exact: true })
+      .click();
+    expect(await readFile(await (await dl).path())).toEqual(uploads[i].buffer);
+    await page.getByRole("button", { name: "Close dialog" }).click();
+  }
+  await page
+    .locator(".document")
+    .filter({
+      has: page.getByRole("heading", { name: "resume.docx", exact: true }),
+    })
+    .getByRole("button", { name: "Open file", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("DOCX preview sentinel");
+  await expect(page.getByRole("dialog")).toContainText(
+    "<img src=x onerror=window.injected=true>",
+  );
+  expect(await page.getByRole("dialog").locator("img").count()).toBe(0);
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
+  const dl = page.waitForEvent("download");
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: "Download original", exact: true })
+    .click();
+  expect(await readFile(await (await dl).path())).toEqual(docx);
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("button", { name: "Lock Jobs", exact: true }).click();
+  await expect(page.locator("#dialog-content")).toBeEmpty();
+  expect(outbound).toEqual([]);
 });

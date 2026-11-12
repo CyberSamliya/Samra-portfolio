@@ -158,3 +158,22 @@ category. Mixed imports use **Save all documents to vault** and add everything i
 one atomic operation. Reimporting skips exact duplicates within each category.
 If an import is downloaded as ZIP, extract it and select the JSON inside. Do not
 upload that outer ZIP as an import package; ZIP uploads are stored as archives.
+
+## Opening uploaded files
+
+Use **Open file** beside a saved document. PDFs are rendered as pages by a local
+PDF.js viewer rather than a browser-plugin iframe; choose **Show next page** for
+additional pages and **Selectable page text** to copy readable text. DOCX files
+show a read-only text preview (formatting and images are omitted). ZIP archives
+must be downloaded and extracted on your device. Every preview has a real
+**Download original** link, which saves the exact original bytes and filename.
+The separate **Download file** button also requests a browser download; check
+the browser's Downloads list (Ctrl+J on Windows) if it does not open automatically.
+
+The preview libraries, worker, fonts and decoding assets are served from this
+site, loaded on demand, and process decrypted bytes locally. Documents are not
+sent to a third-party viewer. JavaScript/XFA execution in PDFs is not enabled,
+and DOCX text is rendered as text, never HTML. Closing/locking the vault destroys
+the preview and revokes its temporary file link. A preview failure leaves the
+original available for download. No vault reset or reupload is needed after this
+update; existing encrypted files and passwords remain unchanged.

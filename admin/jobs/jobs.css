@@ -699,3 +699,38 @@ iframe.preview {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+.document-preview {
+  margin-top: 20px;
+  max-width: 100%;
+  overflow: auto;
+}
+.preview-pages section {
+  margin: 18px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: #f4f5f2;
+}
+.pdf-page {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: white;
+}
+.document-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    14px/1.65 system-ui,
+    sans-serif;
+  background: #f7f8f5;
+  padding: 16px;
+  max-height: 65vh;
+  overflow: auto;
+}
+.preview-pages details {
+  margin-top: 12px;
+}
+.document-preview > button {
+  margin: 12px 0;
+}
