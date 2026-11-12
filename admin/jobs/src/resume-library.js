@@ -77,3 +77,39 @@ export async function readResumePackage(
 
 export const readRecommendationPackage = (value) =>
   readResumePackage(value, "samra-recommendation-library");
+
+export async function readDocumentPackage(value) {
+  if (value?.format === "samra-resume-library")
+    return (await readResumePackage(value)).map((f) => ({
+      ...f,
+      library_category: "Resume",
+    }));
+  if (value?.format === "samra-recommendation-library")
+    return (await readRecommendationPackage(value)).map((f) => ({
+      ...f,
+      library_category: "Recommendation letter",
+    }));
+  if (value?.format === "samra-document-library") {
+    const prepared = await readResumePackage(value, "samra-document-library");
+    return prepared.map((f, i) => {
+      const category = value.files[i].category;
+      if (
+        !["Resume", "Recommendation letter"].includes(category) ||
+        (category === "Recommendation letter" &&
+          f.mime_type === "application/zip")
+      )
+        throw Error("Invalid document category in import file.");
+      return { ...f, library_category: category };
+    });
+  }
+  if (
+    value?.format === "samra-jobs-encrypted-backup" ||
+    value?.format === "samra-jobs-local"
+  )
+    throw Error(
+      "This is a vault backup. Use Restore backup in the page header instead.",
+    );
+  throw Error(
+    "Choose a résumé, recommendation-letter or combined document import file.",
+  );
+}

@@ -150,3 +150,11 @@ Prepared letter packages are readable import files and must be kept private.
 The browser owner must unlock Jobs and import them; the assistant cannot insert
 files directly into another device's vault. This feature does not remove or
 change any recommendation PDFs already present in the public portfolio checkout.
+
+Both upload sections now accept résumé, recommendation-letter and combined
+`samra-document-library` JSON packages. You can select the two original import
+files together or one combined file; each document is sorted by its package
+category. Mixed imports use **Save all documents to vault** and add everything in
+one atomic operation. Reimporting skips exact duplicates within each category.
+If an import is downloaded as ZIP, extract it and select the JSON inside. Do not
+upload that outer ZIP as an import package; ZIP uploads are stored as archives.

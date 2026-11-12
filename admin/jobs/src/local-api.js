@@ -186,11 +186,18 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
       if (!files.length || files.length > 100)
         throw Error("Choose 1–100 files per batch.");
       const prepared = await Promise.all(
-        files.map((f) => prepareResume(f.blob, f.filename, f.hash)),
+        files.map(async (f) => ({
+          ...(await prepareResume(f.blob, f.filename, f.hash)),
+          library_category: f.library_category || category,
+        })),
       );
       if (
-        category === "Recommendation letter" &&
-        prepared.some((f) => f.mime_type === "application/zip")
+        prepared.some(
+          (f) =>
+            !["Resume", "Recommendation letter"].includes(f.library_category) ||
+            (f.library_category === "Recommendation letter" &&
+              f.mime_type === "application/zip"),
+        )
       )
         throw Error("Recommendation letters must be PDF or DOCX files.");
       return transaction("readwrite", (d, store) => {
@@ -201,7 +208,7 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
             d.documents.some(
               (doc) =>
                 doc.library &&
-                (doc.library_category || "Resume") === category &&
+                (doc.library_category || "Resume") === f.library_category &&
                 doc.hash === f.hash,
             )
           ) {
@@ -213,10 +220,10 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
           d.documents.push({
             id,
             library: true,
-            library_category: category,
+            library_category: f.library_category,
             application_id: null,
             kind:
-              category === "Recommendation letter"
+              f.library_category === "Recommendation letter"
                 ? "Recommendation letter"
                 : f.mime_type === "application/zip"
                   ? "Resume archive"

@@ -1,8 +1,4 @@
-import {
-  prepareResume,
-  readResumePackage,
-  readRecommendationPackage,
-} from "./resume-library.js";
+import { prepareResume, readDocumentPackage } from "./resume-library.js";
 import {
   inspectVault,
   setupVault,
@@ -1129,6 +1125,13 @@ function uploadResumes(category = "Resume") {
     : ".pdf,.docx,.zip,.json";
   const preview = node("div");
   let prepared = [];
+  f.append(
+    node(
+      "p",
+      "You can select both import JSON files together, or one combined document import file. Files are automatically sorted into résumés and recommendation letters.",
+      "fine",
+    ),
+  );
   input.lastChild.onchange = act(async (e) => {
     prepared = [];
     preview.replaceChildren();
@@ -1139,17 +1142,32 @@ function uploadResumes(category = "Resume") {
       if (file.name.toLowerCase().endsWith(".json")) {
         if (file.size > 16000000) throw Error("Import package exceeds 16 MB.");
         pending.push(
-          ...(await (letters ? readRecommendationPackage : readResumePackage)(
-            JSON.parse(await file.text()),
-          )),
+          ...(await readDocumentPackage(JSON.parse(await file.text()))),
         );
-      } else pending.push(await prepareResume(file, file.name));
+      } else
+        pending.push({
+          ...(await prepareResume(file, file.name)),
+          library_category: category,
+        });
     }
-    if (letters && pending.some((f) => f.mime_type === "application/zip"))
+    if (
+      pending.some(
+        (f) =>
+          f.library_category === "Recommendation letter" &&
+          f.mime_type === "application/zip",
+      )
+    )
       throw Error("Recommendation letters must be PDF or DOCX files.");
     if (pending.length > 100)
       throw Error("Import at most 100 résumé files per batch.");
     prepared = pending;
+    const types = new Set(prepared.map((f) => f.library_category || category));
+    f.querySelector('button[type="submit"]').textContent =
+      types.size > 1
+        ? "Save all documents to vault"
+        : types.has("Recommendation letter")
+          ? "Save letters to vault"
+          : "Save résumés to vault";
     preview.append(node("h3", prepared.length + " files ready to save"));
     for (const item of prepared)
       preview.append(
@@ -1157,12 +1175,17 @@ function uploadResumes(category = "Resume") {
           "p",
           item.filename +
             " · " +
+            (item.library_category === "Recommendation letter"
+              ? "Recommendation letter"
+              : "Résumé") +
+            " · " +
             Math.ceil(item.size / 1024) +
             " KB" +
             (state.documents.some(
               (d) =>
                 d.library &&
-                (d.library_category || "Resume") === category &&
+                (d.library_category || "Resume") ===
+                  (item.library_category || category) &&
                 d.hash === item.hash,
             )
               ? " · Exact duplicate: skipped"
@@ -1187,15 +1210,20 @@ function uploadResumes(category = "Resume") {
     letters ? "Save letters to vault" : "Save résumés to vault",
     async () => {
       if (!prepared.length) throw Error("Choose and review your files first.");
+      const types = new Set(
+        prepared.map((f) => f.library_category || category),
+      );
       const result = await api.importResumes(prepared, category);
       await refresh();
       $("editor").close();
       render();
       say(
         result.added +
-          (letters
-            ? " recommendation letters saved; "
-            : " résumé files saved; ") +
+          (types.size > 1
+            ? " documents saved; "
+            : types.has("Recommendation letter")
+              ? " recommendation letters saved; "
+              : " résumé files saved; ") +
           result.skipped +
           " exact duplicates skipped. Export an encrypted backup to preserve them.",
       );
