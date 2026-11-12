@@ -1,3 +1,4 @@
+import { prepareResume, RESUME_TYPES } from "./resume-library.js";
 import { openLocalStore } from "./local-store.js";
 import {
   STATUSES,
@@ -13,10 +14,7 @@ const TABLES = [
   "alert_messages",
   "import_state",
 ];
-const TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+const TYPES = RESUME_TYPES;
 const now = () => new Date().toISOString();
 export function initialData() {
   return Object.fromEntries(
@@ -182,6 +180,82 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
         if (!doc) throw Error("Document version not found");
         files.add(file, path);
       }),
+    importResumes: async (files) => {
+      if (!files.length || files.length > 100)
+        throw Error("Choose 1–100 files per batch.");
+      const prepared = await Promise.all(
+        files.map((f) => prepareResume(f.blob, f.filename, f.hash)),
+      );
+      return transaction("readwrite", (d, store) => {
+        let added = 0,
+          skipped = 0;
+        for (const f of prepared) {
+          if (d.documents.some((doc) => doc.library && doc.hash === f.hash)) {
+            skipped++;
+            continue;
+          }
+          const id = crypto.randomUUID(),
+            path = "device/library/" + id;
+          d.documents.push({
+            id,
+            library: true,
+            application_id: null,
+            kind:
+              f.mime_type === "application/zip" ? "Resume archive" : "Resume",
+            version: f.filename,
+            filename: f.filename,
+            mime_type: f.mime_type,
+            hash: f.hash,
+            size: f.size,
+            object_path: path,
+            state: "Draft",
+            draft_text: "",
+            uploaded: true,
+            created_at: now(),
+          });
+          store.add(f.blob, path);
+          added++;
+        }
+        return { added, skipped };
+      });
+    },
+    copyResume: async (libraryId, applicationId) => {
+      const snapshot = await store.snapshot();
+      const source = snapshot.data.documents.find(
+        (d) =>
+          d.id === libraryId &&
+          d.library &&
+          d.uploaded &&
+          d.mime_type !== "application/zip",
+      );
+      const file = snapshot.files.find((f) => f.path === source?.object_path);
+      if (!source || !file) throw Error("Choose a saved PDF or DOCX résumé.");
+      return transaction("readwrite", (d, files) => {
+        if (!d.applications.some((a) => a.id === applicationId))
+          throw Error("Application not found");
+        const existing = d.documents.find(
+          (doc) =>
+            doc.application_id === applicationId &&
+            doc.origin_library_id === libraryId,
+        );
+        if (existing) return structuredClone(existing);
+        const id = crypto.randomUUID(),
+          path = "device/" + applicationId + "/" + id;
+        const copy = {
+          ...source,
+          id,
+          library: false,
+          application_id: applicationId,
+          origin_library_id: libraryId,
+          object_path: path,
+          created_at: now(),
+          state: "Draft",
+        };
+        d.documents.push(copy);
+        files.add(file.blob, path);
+        return structuredClone(copy);
+      });
+    },
     download: (path) => store.download(path),
     rpc: (name, args) =>
       transaction("readwrite", (d) => {
@@ -340,8 +414,20 @@ export function validateBackup(backup) {
     validateApplication(a, data);
   }
   for (const doc of data.documents) {
+    if (doc.library !== undefined && typeof doc.library !== "boolean")
+      throw Error("Invalid library record");
     if (
-      !data.applications.some((a) => a.id === doc.application_id) ||
+      doc.library &&
+      (doc.application_id !== null ||
+        !doc.uploaded ||
+        doc.state !== "Draft" ||
+        typeof doc.filename !== "string" ||
+        !TYPES.includes(doc.mime_type))
+    )
+      throw Error("Invalid résumé library record");
+    if (
+      (doc.library !== true &&
+        !data.applications.some((a) => a.id === doc.application_id)) ||
       !["Draft", "Submitted"].includes(doc.state) ||
       typeof doc.draft_text !== "string"
     )

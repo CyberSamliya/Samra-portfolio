@@ -620,3 +620,175 @@ test("failed IndexedDB commit rolls back both records and files", async ({
   });
   expect(unchanged).toBe(true);
 });
+
+test("résumé library stores independent PDF/DOCX/ZIP originals, deduplicates packages, and copies files to an application", async ({
+  page,
+}) => {
+  await open(page);
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  await page
+    .getByRole("button", { name: "Upload résumés", exact: true })
+    .click();
+  const pdf = Buffer.from("%PDF-1.4 synthetic library original\n%%EOF");
+  const docx = Buffer.from("PK\x03\x04synthetic DOCX original");
+  const zip = Buffer.from("PK\x03\x04synthetic ZIP original");
+  await page.getByLabel("Résumé files or import package").setInputFiles([
+    { name: "library.pdf", mimeType: "application/pdf", buffer: pdf },
+    {
+      name: "library.docx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: docx,
+    },
+    { name: "archive.zip", mimeType: "application/zip", buffer: zip },
+  ]);
+  await expect(page.getByRole("dialog")).toContainText("3 files ready");
+  await page.getByRole("button", { name: "Save résumés to vault" }).click();
+  await expect(page.locator("#notice")).toContainText("3 résumé files saved");
+  let snapshot = await data(page);
+  expect(snapshot.applications).toHaveLength(0);
+  expect(snapshot.documents.filter((d) => d.library)).toHaveLength(3);
+  const row = page
+    .locator(".document")
+    .filter({
+      has: page.getByRole("heading", { name: "library.pdf", exact: true }),
+    });
+  const dl = page.waitForEvent("download");
+  await row.getByRole("button", { name: "Download file", exact: true }).click();
+  expect(await readFile(await (await dl).path())).toEqual(pdf);
+  await row.getByRole("button", { name: "Preview file", exact: true }).click();
+  await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute(
+    "src",
+    /^blob:/,
+  );
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  // A prepared import package is additive and hashes exact binary contents.
+  const { createHash } = await import("node:crypto");
+  const newPdf = Buffer.from("%PDF-1.4 another library original");
+  const pack = {
+    format: "samra-resume-library",
+    version: 1,
+    files: [
+      {
+        name: "same-bytes-new-name.pdf",
+        sha256: createHash("sha256").update(pdf).digest("hex"),
+        base64: pdf.toString("base64"),
+      },
+      {
+        name: "new.pdf",
+        sha256: createHash("sha256").update(newPdf).digest("hex"),
+        base64: newPdf.toString("base64"),
+      },
+    ],
+  };
+  await page
+    .getByRole("button", { name: "Upload résumés", exact: true })
+    .click();
+  await page
+    .getByLabel("Résumé files or import package")
+    .setInputFiles({
+      name: "import.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(pack)),
+    });
+  await expect(page.getByRole("dialog")).toContainText(
+    "Exact duplicate: skipped",
+  );
+  await page.getByRole("button", { name: "Save résumés to vault" }).click();
+  await expect(page.locator("#notice")).toContainText(
+    "1 résumé files saved; 1 exact duplicates skipped",
+  );
+  await page.evaluate(async (password) => {
+    const { unlockVault } =
+      await import("/Samra-portfolio/admin/jobs/src/vault.js");
+    const { createLocalAPI } =
+      await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+    const codec = await unlockVault(password),
+      api = await createLocalAPI(undefined, codec);
+    try {
+      await api.insert("applications", {
+        title: "Synthetic role",
+        company: "Example",
+        posting_url: "https://example.com/library-job",
+      });
+    } finally {
+      api.close();
+      codec.close();
+    }
+  }, PASSWORD);
+  await page.reload();
+  await enter(page);
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  await page
+    .locator(".document")
+    .filter({
+      has: page.getByRole("heading", { name: "library.pdf", exact: true }),
+    })
+    .getByRole("button", { name: "Use for an application" })
+    .click();
+  await page.getByRole("button", { name: "Attach résumé version" }).click();
+  await expect(page.locator("#notice")).toContainText("Résumé attached");
+  snapshot = await data(page);
+  expect(snapshot.documents.filter((d) => d.library)).toHaveLength(4);
+  const copy = snapshot.documents.find((d) => !d.library);
+  expect(copy.application_id).toBe(snapshot.applications[0].id);
+  expect(copy.hash).toBe(createHash("sha256").update(pdf).digest("hex"));
+  // All originals and the application copy survive an encrypted backup round-trip.
+  const backupWait = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export backup", exact: true })
+    .click();
+  const exported = JSON.parse(
+    await readFile(await (await backupWait).path(), "utf8"),
+  );
+  const summary = await page.evaluate(
+    async ({ exported, password }) => {
+      const { decryptBackup } =
+        await import("/Samra-portfolio/admin/jobs/src/vault.js");
+      const { validateBackup } =
+        await import("/Samra-portfolio/admin/jobs/src/local-api.js");
+      const backup = await decryptBackup(exported, password);
+      const prepared = validateBackup(backup);
+      return {
+        files: prepared.files.length,
+        library: prepared.data.documents.filter((d) => d.library).length,
+      };
+    },
+    { exported, password: PASSWORD },
+  );
+  expect(summary).toEqual({ files: 5, library: 4 });
+});
+test("résumé package integrity failures preserve the existing vault", async ({
+  page,
+}) => {
+  await open(page);
+  await page.getByRole("link", { name: "Documents", exact: false }).click();
+  await page
+    .getByRole("button", { name: "Upload résumés", exact: true })
+    .click();
+  await page
+    .getByLabel("Résumé files or import package")
+    .setInputFiles({
+      name: "corrupt.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({
+          format: "samra-resume-library",
+          version: 1,
+          files: [
+            {
+              name: "corrupt.pdf",
+              sha256: "0".repeat(64),
+              base64: Buffer.from("%PDF-1.4 wrong hash").toString("base64"),
+            },
+          ],
+        }),
+      ),
+    });
+  await expect(page.getByRole("dialog")).toContainText(
+    "Import integrity check failed",
+  );
+  await page.getByRole("button", { name: "Save résumés to vault" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Choose and review");
+  expect((await data(page)).documents).toHaveLength(0);
+});

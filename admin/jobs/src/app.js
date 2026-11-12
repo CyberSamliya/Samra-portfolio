@@ -1,3 +1,4 @@
+import { prepareResume, readResumePackage } from "./resume-library.js";
 import {
   inspectVault,
   setupVault,
@@ -850,6 +851,32 @@ function handoff(app) {
 }
 function documentsView() {
   const section = div("stack");
+  const library = div(
+    "card",
+    div(
+      "section-top",
+      div(
+        "",
+        node("h2", "Résumé file library"),
+        node(
+          "p",
+          "Keep master résumés here without creating a job application. Files are encrypted in your vault.",
+          "fine",
+        ),
+      ),
+      button("Upload résumés", uploadResumes, false),
+    ),
+  );
+  const saved = state.documents.filter((d) => d.library);
+  if (!saved.length)
+    library.append(
+      empty(
+        "Add your résumé files",
+        "Upload PDF, DOCX or ZIP files, or import your prepared résumé package.",
+      ),
+    );
+  saved.forEach((d) => library.append(documentRow(d)));
+  section.append(library);
   const profiles = div(
     "card",
     div(
@@ -895,14 +922,16 @@ function documentsView() {
       "fine",
     ),
   );
-  if (!state.documents.length)
+  if (!state.documents.some((d) => !d.library))
     versions.append(
       empty(
         "A fresh page",
         "Open an application to create a draft or upload a tailored PDF or DOCX.",
       ),
     );
-  state.documents.forEach((d) => versions.append(documentRow(d)));
+  state.documents
+    .filter((d) => !d.library)
+    .forEach((d) => versions.append(documentRow(d)));
   section.append(
     profiles,
     versions,
@@ -947,7 +976,7 @@ function documentRow(doc) {
       "row spread",
       div(
         "",
-        node("h3", doc.kind + " · " + doc.version),
+        node("h3", doc.library ? doc.filename : doc.kind + " · " + doc.version),
         node(
           "p",
           (state.apps.find((a) => a.id === doc.application_id)?.company || "") +
@@ -956,11 +985,11 @@ function documentRow(doc) {
           "fine",
         ),
       ),
-      badge(doc.state),
+      badge(doc.library ? "Library" : doc.state),
     ),
   );
   const actions = div("row");
-  if (doc.state === "Draft")
+  if (doc.state === "Draft" && !doc.library)
     actions.append(
       button("Edit draft", () =>
         documentEditor(
@@ -977,7 +1006,9 @@ function documentRow(doc) {
       }),
       button("Preview file", async () => {
         if (doc.mime_type !== "application/pdf") {
-          say("Download this DOCX and open it in your document editor.");
+          say(
+            "Download this file to open it. In-browser preview is available for PDFs.",
+          );
           return;
         }
         const blob = await api.download(doc.object_path);
@@ -1003,8 +1034,109 @@ function documentRow(doc) {
       }),
     );
   }
+  if (doc.library && doc.mime_type !== "application/zip")
+    actions.append(
+      button("Use for an application", () => {
+        if (!state.apps.length)
+          throw Error("Save a job application first, then choose this résumé.");
+        const f = node("form");
+        f.append(
+          field(
+            "Choose application",
+            "application",
+            state.apps[0].id,
+            state.apps.map((a) => ({
+              value: a.id,
+              label: a.company + " — " + a.title,
+            })),
+          ),
+          node(
+            "p",
+            "This makes an independent file version for the selected application. The library original is preserved.",
+            "fine",
+          ),
+        );
+        formSubmit(f, "Attach résumé version", async (values) => {
+          await api.copyResume(doc.id, values.application);
+          await refresh();
+          $("editor").close();
+          render();
+          say(
+            "Résumé attached to the application. The library original is unchanged.",
+          );
+        });
+        modal("Use saved résumé", f);
+      }),
+    );
   row.append(actions);
   return row;
+}
+function uploadResumes() {
+  const f = node("form");
+  const input = required(
+    field("Résumé files or import package", "resumes", "", "file"),
+  );
+  input.lastChild.multiple = true;
+  input.lastChild.accept = ".pdf,.docx,.zip,.json";
+  const preview = node("div");
+  let prepared = [];
+  input.lastChild.onchange = act(async (e) => {
+    prepared = [];
+    preview.replaceChildren();
+    const chosen = [...e.target.files];
+    if (chosen.length > 100) throw Error("Choose at most 100 files per batch.");
+    const pending = [];
+    for (const file of chosen) {
+      if (file.name.toLowerCase().endsWith(".json")) {
+        if (file.size > 16000000) throw Error("Import package exceeds 16 MB.");
+        pending.push(
+          ...(await readResumePackage(JSON.parse(await file.text()))),
+        );
+      } else pending.push(await prepareResume(file, file.name));
+    }
+    if (pending.length > 100)
+      throw Error("Import at most 100 résumé files per batch.");
+    prepared = pending;
+    preview.append(node("h3", prepared.length + " files ready to save"));
+    for (const item of prepared)
+      preview.append(
+        node(
+          "p",
+          item.filename +
+            " · " +
+            Math.ceil(item.size / 1024) +
+            " KB" +
+            (state.documents.some((d) => d.library && d.hash === item.hash)
+              ? " · Exact duplicate: skipped"
+              : ""),
+          "fine",
+        ),
+      );
+  });
+  f.append(
+    input,
+    preview,
+    node(
+      "p",
+      "Files stay encrypted in this browser. Exact duplicate contents are skipped. ZIP archives are retained as files; extract their PDFs yourself or use the prepared import package. This adds to your library without replacing existing records.",
+      "fine",
+    ),
+  );
+  formSubmit(f, "Save résumés to vault", async () => {
+    if (!prepared.length)
+      throw Error("Choose and review your résumé files first.");
+    const result = await api.importResumes(prepared);
+    await refresh();
+    $("editor").close();
+    render();
+    say(
+      result.added +
+        " résumé files saved; " +
+        result.skipped +
+        " exact duplicates skipped. Export an encrypted backup to preserve them.",
+    );
+  });
+  modal("Upload résumés", f);
 }
 function documentEditor(app, doc = {}) {
   if (!app) throw Error("Choose an application first.");

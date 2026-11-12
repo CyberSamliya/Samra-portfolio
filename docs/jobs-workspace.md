@@ -110,3 +110,26 @@ in a separate browser context, backup tampering, manual and inactivity locking,
 refresh locking, blocked storage, normal Jobs flows and public portfolio routes.
 These are actual Web Crypto and IndexedDB tests, without a mocked backend.
 Passkeys/WebAuthn are not implemented; this version uses a local vault password.
+
+## Résumé file library
+
+Documents → **Résumé file library → Upload résumés** saves files independently
+of job applications. Select multiple PDFs, DOCX documents or ZIP archives (each
+up to 8 MiB), review the list, then choose **Save résumés to vault**. A prepared
+`samra-resume-library` JSON package can also be selected there; it includes file
+bytes and SHA-256 checksums. Package imports add records, never replace your
+vault or application history. Exact duplicate contents are skipped atomically.
+ZIP archives are stored/downloaded as files, not automatically extracted by the
+browser. A prepared package may include their extracted PDF files separately.
+
+Saved files are encrypted with the same vault password, included in encrypted
+backups, and can be downloaded with their original names. PDFs support local
+preview. **Use for an application** creates an independent PDF/DOCX version on
+an existing application while preserving the library original; ZIP archives
+cannot be attached as application résumés. Record the submitted copy normally.
+
+Prepared import packages contain readable base64 file contents, not encryption.
+Keep them private and never commit them to Git or publish them with the static
+site. Importing requires the owner to unlock their vault in their browser; the
+assistant cannot directly modify a vault on another browser/device. No attached
+résumé content is embedded in this repository or deployment.
