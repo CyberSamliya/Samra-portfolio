@@ -5,7 +5,7 @@ import {
   unlockVault,
   decryptBackup,
 } from "./vault.js";
-import { createLocalAPI, validateBackup } from "./local-api.js";
+import { createLocalAPI, validateBackup, INTERVIEW_FORMATS, INTERVIEW_OUTCOMES } from "./local-api.js";
 import {
   STATUSES,
   TRACKS,
@@ -186,6 +186,7 @@ const views = {
   find: ["Find Jobs", "Good opportunities start with a focused search."],
   alerts: ["Alerts", "A quieter inbox. A clearer next step."],
   applications: ["Applications", "Every application, and what comes next."],
+  status: ["Status", "Track applications, interviews, and follow-ups."],
   documents: ["Documents", "Your experience, thoughtfully presented."],
 };
 function render() {
@@ -204,6 +205,7 @@ function render() {
       find: findView,
       alerts: alertsView,
       applications: applicationsView,
+      status: statusView,
       documents: documentsView,
     }[key](),
   );
@@ -670,6 +672,145 @@ function applicationsView() {
   draw();
   return section;
 }
+const closedStatuses = ["Rejected", "Withdrawn", "Archived"];
+
+function statusView() {
+  const view = div("stack");
+  const panel = div("card", node("h2", "Application pipeline"));
+  const search = field("Search by job or company", "status-search", "", "search");
+  const filter = field("Status filter", "status-filter", "", [
+    { value: "", label: "All statuses" }, ...STATUSES,
+  ]);
+  const list = div("stack");
+  panel.append(div("row", search, filter), list);
+
+  function draw() {
+    const query = search.lastChild.value.trim().toLowerCase();
+    const selected = filter.lastChild.value;
+    const apps = state.apps.filter((app) =>
+      (!selected || app.status === selected) &&
+      (app.title + " " + app.company).toLowerCase().includes(query),
+    );
+    list.replaceChildren(...apps.map((app) => div(
+      "row spread status-item",
+      div("", node("strong", app.title), node("p", app.company, "fine")),
+      div("row", badge(app.status),
+        app.date_applied && node("span", "Applied " + app.date_applied, "fine"),
+        button("Update status", () => editStatus(app)),
+        button("View application", () => applicationDetail(app))),
+    )));
+    if (!apps.length) list.append(empty("No matching applications", "Add a job in Applications or change the filters."));
+  }
+  search.lastChild.oninput = draw;
+  filter.lastChild.onchange = draw;
+  draw();
+
+  const interviews = state.apps.flatMap((app) =>
+    (app.interviews || []).map((interview) => ({ app, interview })),
+  );
+  const interviewsCard = div("card", div("row spread",
+    node("h2", "Interview tracker"),
+    state.apps.length && button("Add interview", chooseInterviewApplication),
+  ));
+  for (const [label, upcoming] of [["Upcoming interviews", true], ["Past and closed interviews", false]]) {
+    const entries = interviews.filter(({ interview }) =>
+      (interview.outcome === "Scheduled" && Date.parse(interview.starts_at) >= Date.now()) === upcoming,
+    ).sort((a, b) => (upcoming ? 1 : -1) *
+      (Date.parse(a.interview.starts_at) - Date.parse(b.interview.starts_at)),
+    );
+    interviewsCard.append(node("h3", label));
+    if (!entries.length) interviewsCard.append(node("p", "No interviews to show.", "fine"));
+    for (const { app, interview } of entries) {
+      const date = new Date(interview.starts_at).toLocaleString(undefined, {
+        dateStyle: "medium", timeStyle: "short",
+      });
+      const details = div("", node("strong", interview.round + " · " + app.company),
+        node("p", app.title + " · " + date + " · " + interview.format, "fine"));
+      if (interview.contact) details.append(node("p", interview.contact, "fine"));
+      if (interview.notes) details.append(node("p", interview.notes, "fine"));
+      interviewsCard.append(div("row spread status-item", details,
+        div("row", badge(interview.outcome), button("Edit interview", () => editInterview(app, interview)))));
+    }
+  }
+
+  const followUps = div("card", node("h2", "Follow-ups"));
+  const queue = state.apps.filter((app) => app.next_follow_up && !closedStatuses.includes(app.status))
+    .sort((a, b) => a.next_follow_up.localeCompare(b.next_follow_up));
+  if (!queue.length) followUps.append(node("p", "No follow-ups scheduled. Set a date when you update an application.", "fine"));
+  for (const app of queue) {
+    const due = app.next_follow_up < today() ? "Overdue" :
+      app.next_follow_up === today() ? "Due today" : "Upcoming";
+    followUps.append(div("row spread status-item",
+      div("", node("strong", app.title), node("p", app.company + " · " + app.next_follow_up, "fine")),
+      div("row", badge(due, due !== "Upcoming"), button("Edit follow-up", () => editStatus(app))),
+    ));
+  }
+  view.append(interviewsCard, followUps, panel);
+  return view;
+}
+
+function editStatus(app) {
+  const form = node("form");
+  const options = STATUSES.filter((status) => status !== "Applied" || app.status === "Applied");
+  form.append(field("Application status", "status", app.status, options),
+    field("Next follow-up", "next_follow_up", app.next_follow_up, "date"));
+  if (app.status !== "Applied")
+    form.append(button("Record as Applied", () => markApplied(app)));
+  formSubmit(form, "Save status", async (values) => {
+    await api.update("applications", app.id, {
+      status: values.status, next_follow_up: values.next_follow_up || null,
+    });
+    await finishStatusChange("Application status and follow-up saved.");
+  });
+  modal(app.title + " · " + app.company, form);
+}
+
+function chooseInterviewApplication() {
+  const form = node("form");
+  const choices = state.apps.map((app) => ({
+    label: app.company + " · " + app.title, value: app.id,
+  })).sort((a, b) => a.label.localeCompare(b.label));
+  form.append(required(field("Application", "application", "", [
+    { label: "Choose an application", value: "" }, ...choices,
+  ])));
+  formSubmit(form, "Continue", ({ application }) =>
+    editInterview(state.apps.find((app) => app.id === application)));
+  modal("Add interview", form);
+}
+
+function editInterview(app, interview = {}) {
+  const form = node("form");
+  const date = interview.starts_at && new Date(interview.starts_at);
+  const local = date && new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  form.append(
+    required(field("Interview round", "round", interview.round)),
+    required(field("Interview date and time (" + zone + ")", "starts_at", local || "", "datetime-local")),
+    field("Interview format", "format", interview.format || "Video", INTERVIEW_FORMATS),
+    field("Interview status", "outcome", interview.outcome || "Scheduled", INTERVIEW_OUTCOMES),
+    field("Interviewer or contact", "contact", interview.contact),
+    field("Meeting details and notes", "notes", interview.notes, "textarea"),
+  );
+  form.elements.notes.maxLength = 10000;
+  formSubmit(form, "Save interview", async (values) => {
+    await api.rpc("save_interview", {
+      application: app.id, interview: {
+        ...values, id: interview.id, starts_at: new Date(values.starts_at).toISOString(),
+      },
+    });
+    await finishStatusChange("Interview saved.");
+  });
+  modal(app.title + " · " + app.company, form);
+}
+
+async function finishStatusChange(message) {
+  await refresh();
+  $("editor").close();
+  render();
+  say(message);
+}
+
 function downloadBlob(blob, name) {
   if (!allowed) return;
   const url = URL.createObjectURL(blob);
@@ -699,6 +840,8 @@ async function applicationDetail(app) {
       "row",
       link("Open Application ↗", app.posting_url, "button secondary"),
       button("Edit details", () => editApplication(app)),
+      button("Update status", () => editStatus(app)),
+      button("Add interview", () => editInterview(app)),
       button("Mark Applied", () => markApplied(app), false),
     ),
     node(

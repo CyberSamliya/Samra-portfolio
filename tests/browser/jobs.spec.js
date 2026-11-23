@@ -1144,3 +1144,35 @@ sys.stdout.buffer.write(b.getvalue())`,
   await expect(page.locator("#dialog-content")).toBeEmpty();
   expect(outbound).toEqual([]);
 });
+
+test("Status tracks multiple interview rounds and follows the application record", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Add a job" }).click();
+  await page.getByLabel("Job title").fill("SOC Analyst");
+  await page.getByLabel("Company", { exact: true }).fill("Example employer");
+  await page.getByLabel("Posting URL").fill("https://example.com/careers/soc");
+  await page.getByRole("button", { name: "Save application", exact: true }).click();
+  await page.getByRole("link", { name: /Status/ }).click();
+  await page.getByRole("button", { name: "Update status" }).click();
+  await page.getByLabel("Application status").selectOption("Interview");
+  await page.getByLabel("Next follow-up").fill("2025-11-11");
+  await page.getByRole("button", { name: "Save status" }).click();
+  await expect(page.getByText("Overdue", { exact: true })).toBeVisible();
+  for (const round of ["Recruiter screen", "Technical round"]) {
+    await page.getByRole("button", { name: "Add interview", exact: true }).click();
+    await page.getByLabel("Application", { exact: true }).selectOption({ label: "Example employer · SOC Analyst" });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByLabel("Interview round").fill(round);
+    await page.getByLabel(/Interview date and time/).fill("2099-11-20T10:00");
+    await page.getByRole("button", { name: "Save interview" }).click();
+    await expect(page.getByText(round + " · Example employer")).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Edit interview" }).first().click();
+  await page.getByLabel("Interview status").selectOption("Completed");
+  await page.getByRole("button", { name: "Save interview" }).click();
+  await page.reload();
+  await enter(page);
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Scheduled", { exact: true })).toBeVisible();
+  expect((await data(page)).applications[0].interviews).toHaveLength(2);
+});

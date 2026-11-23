@@ -734,3 +734,13 @@ iframe.preview {
 .document-preview > button {
   margin: 12px 0;
 }
+
+.status-item {
+  border-top: 1px solid var(--line, #d9e1e5);
+  padding-block: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.status-item p {
+  margin-block: 0.25rem 0;
+}

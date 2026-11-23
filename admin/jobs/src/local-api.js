@@ -42,6 +42,21 @@ function audit(data, record, before) {
     after_record: structuredClone(record),
   });
 }
+export const INTERVIEW_OUTCOMES = ["Scheduled", "Completed", "Canceled"];
+export const INTERVIEW_FORMATS = ["Phone", "Video", "In person", "Other"];
+
+function validateInterview(row) {
+  if (
+    !row || typeof row.id !== "string" ||
+    typeof row.round !== "string" || !row.round.trim() || row.round.length > 1000 ||
+    typeof row.starts_at !== "string" || !Number.isFinite(Date.parse(row.starts_at)) ||
+    !INTERVIEW_FORMATS.includes(row.format) ||
+    !INTERVIEW_OUTCOMES.includes(row.outcome) ||
+    typeof row.contact !== "string" || row.contact.length > 1000 ||
+    typeof row.notes !== "string" || row.notes.length > 10000
+  ) throw Error("Enter a valid interview round, date, format, and status.");
+}
+
 function validateApplication(record, data) {
   if (
     !record.title?.trim() ||
@@ -49,6 +64,15 @@ function validateApplication(record, data) {
     !STATUSES.includes(record.status)
   )
     throw Error("Title, company and a valid status are required.");
+  if (record.interviews !== undefined) {
+    if (!Array.isArray(record.interviews)) throw Error("Invalid interview history.");
+    const ids = new Set();
+    for (const interview of record.interviews) {
+      validateInterview(interview);
+      if (ids.has(interview.id)) throw Error("Duplicate interview.");
+      ids.add(interview.id);
+    }
+  }
   record.normalized_url = normalizeURL(record.posting_url);
   if (
     data.applications.some(
@@ -285,6 +309,25 @@ export async function createLocalAPI(dbName = "samra-jobs-local-v1", codec) {
     download: (path) => store.download(path),
     rpc: (name, args) =>
       transaction("readwrite", (d) => {
+        if (name === "save_interview") {
+          const app = d.applications.find((row) => row.id === args.application);
+          if (!app) throw Error("Application not found.");
+          const before = structuredClone(app);
+          const interview = {
+            ...args.interview,
+            id: args.interview.id ?? crypto.randomUUID(),
+          };
+          validateInterview(interview);
+          const interviews = app.interviews ?? [];
+          if (args.interview.id && !interviews.some((row) => row.id === interview.id))
+            throw Error("Interview no longer exists.");
+          app.interviews = args.interview.id
+            ? interviews.map((row) => row.id === interview.id ? interview : row)
+            : [...interviews, interview];
+          app.updated_at = now();
+          audit(d, app, before);
+          return structuredClone(interview);
+        }
         if (name === "ingest_alert") {
           if (
             d.alert_messages.some(
